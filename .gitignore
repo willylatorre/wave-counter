@@ -10,3 +10,5 @@ dist/
 __pycache__/
 packages/node/index.d.ts
 packages/node/index.js
+playwright-report/
+test-results/

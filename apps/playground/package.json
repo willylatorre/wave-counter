@@ -1,0 +1,32 @@
+{
+  "name": "@wave-counter/playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "dev:fastapi": "uv run --project ../../python/wave-counter uvicorn server.fastapi:app --host 127.0.0.1 --port 18081",
+    "dev:express": "npm run build --workspace @wave-counter/node && tsx server/express.ts",
+    "build": "vue-tsc -p tsconfig.json --noEmit && vite build",
+    "pretest": "npm run build --workspace @wave-counter/client && npm run build --workspace @wave-counter/vue",
+    "test": "playwright test",
+    "typecheck": "vue-tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@wave-counter/client": "0.1.0",
+    "@wave-counter/node": "0.1.0",
+    "@wave-counter/vue": "0.1.0",
+    "express": "^5.1.0",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.14",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.5",
+    "vue-tsc": "^3.0.3"
+  }
+}

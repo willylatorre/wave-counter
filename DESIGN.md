@@ -147,7 +147,7 @@ The counter is flat at rest, defined by a full Waterline border and one near-fla
 - **Shadow Strategy:** Contact plus Ambient Popover, as defined above.
 - **Border:** One full Waterline boundary.
 - **Internal Padding:** 1rem, reduced to 0.875rem at the bottom for optical balance.
-- **Motion:** Pointer entry uses opacity and a 0.97 scale over 240ms from the top-left trigger origin; exit takes 160ms. Keyboard entry and reduced motion are instant.
+- **Motion:** Pointer entry uses opacity and a 0.97 scale over 240ms from the top-center trigger origin; exit takes 160ms. Keyboard entry and reduced motion are instant.
 
 ### Analytics Line
 
@@ -179,4 +179,3 @@ The counter is flat at rest, defined by a full Waterline border and one near-fla
 - **Don't** use bouncy, elastic, slow, or non-interruptible motion.
 - **Don't** use coffee-themed brown palettes that make the reusable library specific to one counter.
 - **Don't** animate layout properties, keyboard-initiated opening, or motion under reduced-motion preferences.
-

@@ -188,5 +188,7 @@ test('defines reduced-motion, reduced-transparency, contrast, and fine-pointer r
   expect(styles).toContain('@media (prefers-reduced-transparency: reduce)')
   expect(styles).toContain('@media (prefers-contrast: more)')
   expect(styles).toContain('@media (hover: hover) and (pointer: fine)')
+  expect(styles).toContain('left: 50%')
+  expect(styles).toContain('transform: translateX(-50%)')
   expect(styles).not.toContain('transition: all')
 })

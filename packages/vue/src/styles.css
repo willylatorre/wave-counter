@@ -76,7 +76,7 @@
   position: absolute;
   z-index: 1000;
   top: calc(100% + 0.5rem);
-  left: 0;
+  left: 50%;
   width: min(20rem, calc(100vw - 2rem));
   padding: 1rem 1rem 0.875rem;
   border: 1px solid var(--wave-border);
@@ -86,7 +86,8 @@
   box-shadow:
     0 1px 2px oklch(28% 0.018 215 / 0.08),
     0 14px 34px oklch(28% 0.018 215 / 0.14);
-  transform-origin: top left;
+  transform: translateX(-50%);
+  transform-origin: top center;
 }
 
 .wave-popover-enter-active {
@@ -104,7 +105,7 @@
 .wave-popover-enter-from,
 .wave-popover-leave-to {
   opacity: 0;
-  transform: translateY(-0.25rem) scale(0.97);
+  transform: translateX(-50%) translateY(-0.25rem) scale(0.97);
 }
 
 .wave-counter[data-open-source='keyboard'] .wave-popover-enter-active,
@@ -307,7 +308,7 @@
 
   .wave-popover-enter-from,
   .wave-popover-leave-to {
-    transform: none;
+    transform: translateX(-50%);
   }
 
   .wave-counter__trigger:active {
