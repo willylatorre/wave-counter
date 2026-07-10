@@ -12,6 +12,20 @@ pub enum ErrorCode {
     Storage,
 }
 
+impl ErrorCode {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidCounterKey => "invalid_counter_key",
+            Self::InvalidEventId => "invalid_event_id",
+            Self::InvalidAnalyticsWindow => "invalid_analytics_window",
+            Self::Busy => "busy",
+            Self::Configuration => "configuration",
+            Self::Storage => "storage",
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum WaveCounterError {
     #[error("counter key must match [a-z0-9][a-z0-9_-]{{0,63}}")]

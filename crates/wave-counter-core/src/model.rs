@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::error::WaveCounterError;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CounterSnapshot {
@@ -25,6 +27,17 @@ impl AnalyticsWindow {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::SevenDays => "7d",
+        }
+    }
+}
+
+impl std::str::FromStr for AnalyticsWindow {
+    type Err = WaveCounterError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "7d" => Ok(Self::SevenDays),
+            _ => Err(WaveCounterError::InvalidAnalyticsWindow),
         }
     }
 }

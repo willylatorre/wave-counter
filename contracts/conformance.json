@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "unknown counter is virtual zero",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "GET",
+          "path": "/counters/coffee",
+          "status": 200,
+          "body": { "key": "coffee", "total": 0, "updatedAt": null }
+        }
+      ]
+    },
+    {
+      "name": "configured baseline is visible",
+      "initialCounts": { "coffee": 67 },
+      "steps": [
+        {
+          "method": "GET",
+          "path": "/counters/coffee",
+          "status": 200,
+          "bodyIncludes": { "key": "coffee", "total": 67 }
+        }
+      ]
+    },
+    {
+      "name": "event replay is idempotent",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "POST",
+          "path": "/counters/coffee/events",
+          "json": { "eventId": "0198f2f7-6d42-7d94-b1a6-e4305543f132" },
+          "status": 201,
+          "bodyIncludes": { "key": "coffee", "total": 1 }
+        },
+        {
+          "method": "POST",
+          "path": "/counters/coffee/events",
+          "json": { "eventId": "0198f2f7-6d42-7d94-b1a6-e4305543f132" },
+          "status": 200,
+          "bodyIncludes": { "key": "coffee", "total": 1 }
+        }
+      ]
+    },
+    {
+      "name": "invalid key is rejected",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "GET",
+          "path": "/counters/Coffee",
+          "status": 400,
+          "body": {
+            "error": {
+              "code": "invalid_counter_key",
+              "message": "counter key must match [a-z0-9][a-z0-9_-]{0,63}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "invalid event ID is rejected",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "POST",
+          "path": "/counters/coffee/events",
+          "json": { "eventId": "550e8400-e29b-41d4-a716-446655440000" },
+          "status": 400,
+          "body": {
+            "error": {
+              "code": "invalid_event_id",
+              "message": "event ID must be a UUIDv7"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "invalid analytics window is rejected",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "GET",
+          "path": "/counters/coffee/analytics?window=30d",
+          "status": 400,
+          "body": {
+            "error": {
+              "code": "invalid_analytics_window",
+              "message": "analytics window is not supported"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

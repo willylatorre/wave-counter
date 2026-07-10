@@ -73,6 +73,18 @@ fn rejects_non_v7_event_ids() {
 }
 
 #[test]
+fn parses_only_the_supported_analytics_window() {
+    assert_eq!(
+        "7d".parse::<AnalyticsWindow>().unwrap(),
+        AnalyticsWindow::SevenDays
+    );
+    let error = "30d"
+        .parse::<AnalyticsWindow>()
+        .expect_err("window is unsupported");
+    assert_eq!(error.code(), ErrorCode::InvalidAnalyticsWindow);
+}
+
+#[test]
 fn applies_a_baseline_once_without_fabricating_events() {
     let directory = tempdir().expect("temporary directory");
     let path = directory.path().join("waves.sqlite3");
