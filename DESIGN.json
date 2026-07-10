@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-10T14:56:30Z",
+  "title": "Design System: Wave Counter",
+  "extensions": {
+    "colorMeta": {
+      "deep-lake-ink": {
+        "role": "neutral",
+        "displayName": "Deep Lake Ink",
+        "canonical": "oklch(28% 0.018 215)",
+        "tonalRamp": ["oklch(15% 0.018 215)", "oklch(26% 0.018 215)", "oklch(38% 0.018 215)", "oklch(50% 0.018 215)", "oklch(62% 0.016 215)", "oklch(74% 0.013 215)", "oklch(86% 0.009 215)", "oklch(95% 0.005 215)"]
+      },
+      "morning-mist-surface": {
+        "role": "neutral",
+        "displayName": "Morning Mist Surface",
+        "canonical": "oklch(97% 0.012 205)",
+        "tonalRamp": ["oklch(15% 0.018 205)", "oklch(27% 0.018 205)", "oklch(39% 0.018 205)", "oklch(51% 0.017 205)", "oklch(63% 0.015 205)", "oklch(75% 0.014 205)", "oklch(87% 0.013 205)", "oklch(97% 0.012 205)"]
+      },
+      "tidepool-signal": {
+        "role": "primary",
+        "displayName": "Tidepool Signal",
+        "canonical": "oklch(59% 0.12 194)",
+        "tonalRamp": ["oklch(15% 0.05 194)", "oklch(27% 0.08 194)", "oklch(39% 0.1 194)", "oklch(51% 0.12 194)", "oklch(63% 0.12 194)", "oklch(75% 0.1 194)", "oklch(87% 0.06 194)", "oklch(95% 0.03 194)"]
+      }
+    },
+    "typographyMeta": {
+      "metric": { "displayName": "Metric", "purpose": "Stable authoritative analytics totals." },
+      "title": { "displayName": "Title", "purpose": "Counter identity inside analytics." },
+      "label": { "displayName": "Label", "purpose": "One short analytics eyebrow." }
+    },
+    "shadows": [
+      { "name": "contact", "value": "0 1px 2px oklch(28% 0.018 215 / 0.08)", "purpose": "Separates adjacent edges." },
+      { "name": "ambient-popover", "value": "0 14px 34px oklch(28% 0.018 215 / 0.14)", "purpose": "Separates the overlapping analytics surface." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Immediate pointer feedback and surface arrival." },
+      { "name": "press-in", "value": "80ms", "purpose": "Pointer-down acknowledgement." },
+      { "name": "press-out", "value": "130ms", "purpose": "Quick physical settle." },
+      { "name": "popover-enter", "value": "240ms", "purpose": "Spatially connects analytics to its trigger." },
+      { "name": "popover-exit", "value": "160ms", "purpose": "Returns control without delay." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Counter Button",
+      "kind": "button",
+      "refersTo": "counter-button",
+      "description": "The compact primary event control.",
+      "html": "<button class=\"ds-counter\" type=\"button\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"M6 8h10v5a5 5 0 0 1-10 0V8Zm10 1h1a3 3 0 0 1 0 6h-1M6 4h10\"/></svg><span>128</span></button>",
+      "css": ".ds-counter { min-width:4.5rem; height:2.75rem; display:inline-flex; align-items:center; justify-content:center; gap:.5rem; padding:.625rem .75rem; border:1px solid oklch(84% .02 205); border-radius:.875rem; background:oklch(97% .012 205); color:oklch(28% .018 215); font:680 .9375rem/1 system-ui; font-variant-numeric:tabular-nums; cursor:pointer; transition:transform 130ms cubic-bezier(.23,1,.32,1), border-color 130ms ease, background-color 130ms ease; } .ds-counter svg { width:1.125rem; fill:none; stroke:oklch(48% .12 194); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; } .ds-counter:active { transform:scale(.97); transition-duration:80ms; } .ds-counter:focus-visible { outline:3px solid oklch(59% .12 194 / .45); outline-offset:2px; }"
+    },
+    {
+      "name": "Analytics Popover",
+      "kind": "custom",
+      "refersTo": "analytics-popover",
+      "description": "A solid, origin-aware seven-day analytics surface.",
+      "html": "<section class=\"ds-popover\"><p class=\"ds-label\">SEVEN DAY ACTIVITY</p><h2>Coffee</h2><strong>42</strong><span> events</span><p>20% more than the previous seven days</p></section>",
+      "css": ".ds-popover { width:20rem; padding:1rem 1rem .875rem; border:1px solid oklch(84% .02 205); border-radius:1.125rem; background:oklch(98.5% .008 205); color:oklch(28% .018 215); box-shadow:0 1px 2px oklch(28% .018 215 / .08),0 14px 34px oklch(28% .018 215 / .14); font-family:system-ui; } .ds-popover h2,.ds-popover p { margin:0; } .ds-popover h2 { font-size:1rem; } .ds-popover strong { display:inline-block; margin-top:1rem; font-size:1.75rem; letter-spacing:-.035em; font-variant-numeric:tabular-nums; } .ds-popover p:last-child { margin-top:.375rem; color:oklch(52% .025 215); font-size:.75rem; } .ds-label { color:oklch(52% .025 215); font-size:.6875rem; font-weight:650; letter-spacing:.06em; }"
+    },
+    {
+      "name": "Analytics Error",
+      "kind": "custom",
+      "description": "An inline retry state that never displaces the counter.",
+      "html": "<div class=\"ds-error\"><p>Activity is unavailable.</p><button type=\"button\">Try again</button></div>",
+      "css": ".ds-error { padding:.875rem; border:1px solid oklch(55% .17 25 / .3); border-radius:.75rem; background:oklch(55% .17 25 / .06); color:oklch(55% .17 25); font:.8125rem/1.4 system-ui; } .ds-error p { margin:0; } .ds-error button { margin-top:.625rem; padding:0; border:0; background:transparent; color:inherit; font:inherit; font-weight:700; text-decoration:underline; text-underline-offset:.2em; cursor:pointer; } .ds-error button:focus-visible { outline:3px solid currentColor; outline-offset:2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pocket Instrument",
+    "overview": "Wave Counter is a small, precise instrument embedded in someone else's interface. It is immediately understandable, satisfying to press, and visually self-contained without becoming a card or dashboard. Motion is responsive feedback plus spatial explanation.",
+    "keyCharacteristics": ["Compact 44px touch target", "Restrained cool-neutral surfaces with one tidepool accent", "Tabular numerals and host-inherited typography", "Quiet ambient depth only on the overlapping popover", "Complete pointer, touch, keyboard, and accessibility states"],
+    "rules": [
+      { "name": "The One Signal Rule", "body": "Tidepool is the only accent and appears only on action, focus, or data.", "section": "colors" },
+      { "name": "The Stable Number Rule", "body": "Every changing total uses tabular figures; reconciliation never shifts neighboring content.", "section": "typography" },
+      { "name": "The Earned Depth Rule", "body": "Only a surface that physically overlaps another surface receives an ambient shadow.", "section": "elevation" }
+    ],
+    "dos": ["Do keep the primary target at least 2.75rem (44px) high.", "Do respond on pointer-down and reconcile optimistic totals without disabling the control.", "Do provide textual total, comparison, UTC range, and daily counts beside every chart."],
+    "donts": ["Don't use casino counters, streak mechanics, confetti, badges, or other engagement-pressure patterns.", "Don't use neon-on-dark developer-tool styling, purple gradients, glassmorphism, or decorative glow.", "Don't use coffee-themed brown palettes that make the reusable library specific to one counter."]
+  }
+}

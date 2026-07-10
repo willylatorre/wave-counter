@@ -1,0 +1,289 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+import { Coffee } from '@lucide/vue'
+
+import type { Analytics, WaveCounterTransport } from '@wave-counter/client'
+
+import AnalyticsChart from './AnalyticsChart.vue'
+import { useWaveCounter } from './useWaveCounter.js'
+
+const props = withDefaults(
+  defineProps<{
+    counterKey: string
+    endpoint: string
+    icon?: Component
+    showStats?: boolean
+    longPressMs?: number
+    transport?: WaveCounterTransport
+  }>(),
+  {
+    icon: () => Coffee,
+    showStats: true,
+    longPressMs: 550,
+  },
+)
+
+const emit = defineEmits<{
+  error: [error: Error]
+}>()
+
+const root = ref<HTMLElement | null>(null)
+const trigger = ref<HTMLButtonElement | null>(null)
+const openSource = ref<'pointer' | 'keyboard'>('pointer')
+const wave = useWaveCounter({
+  counterKey: props.counterKey,
+  endpoint: props.endpoint,
+  showStats: props.showStats,
+  ...(props.transport ? { transport: props.transport } : {}),
+})
+let longPressTimer: ReturnType<typeof setTimeout> | undefined
+let pointerStart: { x: number; y: number } | undefined
+let longPressActivated = false
+
+const total = computed(() => wave.counter.value?.total)
+const unavailable = computed(() => !wave.loading.value && wave.counter.value === null)
+const title = computed(() => `${capitalize(props.counterKey)} statistics`)
+const triggerLabel = computed(() => {
+  const count = total.value === undefined ? 'unavailable' : `${total.value} total`
+  const statsHint = wave.statsEnabled.value
+    ? ' Right click, long press, or use the context menu key for statistics.'
+    : ''
+  return `Add one ${props.counterKey}. ${count}.${statsHint}`
+})
+const comparison = computed(() => comparisonText(wave.analytics.value))
+const dateRange = computed(() => rangeText(wave.analytics.value))
+const accessibleSummary = computed(() => summaryText(wave.analytics.value))
+
+watch(
+  () => props.showStats,
+  (enabled) => wave.enableStats(enabled),
+)
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleOutsidePointer)
+  void wave.load().catch(emitError)
+})
+
+onBeforeUnmount(() => {
+  cancelLongPress()
+  document.removeEventListener('pointerdown', handleOutsidePointer)
+})
+
+async function increment(): Promise<void> {
+  if (longPressActivated) {
+    longPressActivated = false
+    return
+  }
+  try {
+    await wave.increment()
+  } catch (error) {
+    emitError(error)
+  }
+}
+
+async function openStats(source: 'pointer' | 'keyboard'): Promise<void> {
+  if (!wave.statsEnabled.value) return
+  openSource.value = source
+  try {
+    await wave.openStats()
+  } catch {
+    // Analytics errors stay inside the popover and retry in place.
+  }
+}
+
+function handleContextMenu(event: MouseEvent): void {
+  if (!wave.statsEnabled.value) return
+  event.preventDefault()
+  void openStats('pointer')
+}
+
+function handleTriggerKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && wave.statsOpen.value) {
+    event.preventDefault()
+    closeAndRestoreFocus()
+    return
+  }
+  if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+    if (!wave.statsEnabled.value) return
+    event.preventDefault()
+    void openStats('keyboard')
+  }
+}
+
+function handlePopoverKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  event.preventDefault()
+  closeAndRestoreFocus()
+}
+
+function closeAndRestoreFocus(): void {
+  wave.closeStats()
+  trigger.value?.focus({ preventScroll: true })
+}
+
+function handleOutsidePointer(event: PointerEvent): void {
+  if (!wave.statsOpen.value || root.value?.contains(event.target as Node)) return
+  wave.closeStats()
+}
+
+function handlePointerDown(event: PointerEvent): void {
+  if (event.pointerType !== 'touch' || !wave.statsEnabled.value) return
+  cancelLongPress()
+  pointerStart = { x: event.clientX, y: event.clientY }
+  longPressActivated = false
+  longPressTimer = setTimeout(() => {
+    longPressActivated = true
+    void openStats('pointer')
+  }, props.longPressMs)
+}
+
+function handlePointerMove(event: PointerEvent): void {
+  if (!pointerStart || event.pointerType !== 'touch') return
+  const distance = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y)
+  if (distance > 10) cancelLongPress()
+}
+
+function cancelLongPress(): void {
+  if (longPressTimer !== undefined) clearTimeout(longPressTimer)
+  longPressTimer = undefined
+  pointerStart = undefined
+}
+
+function emitError(error: unknown): void {
+  emit('error', error instanceof Error ? error : new Error(String(error)))
+}
+
+async function retryAnalytics(): Promise<void> {
+  try {
+    await wave.loadAnalytics()
+  } catch {
+    // The renewed error remains visible in the popover.
+  }
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function comparisonText(analytics: Analytics | null): string {
+  if (!analytics) return ''
+  if (analytics.previousTotal === 0) {
+    return analytics.total === 0
+      ? 'No events in this or the previous seven days'
+      : `${analytics.total} events, with none in the previous seven days`
+  }
+  const change = analytics.changePercentage ?? 0
+  const direction = change >= 0 ? 'more' : 'less'
+  return `${Math.abs(change)}% ${direction} than the previous seven days`
+}
+
+function rangeText(analytics: Analytics | null): string {
+  if (!analytics?.points.length) return 'Last seven UTC days'
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+  const first = analytics.points[0]
+  const last = analytics.points.at(-1)
+  return first && last
+    ? `${formatter.format(new Date(first.start))} to ${formatter.format(new Date(last.start))}, UTC`
+    : 'Last seven UTC days'
+}
+
+function summaryText(analytics: Analytics | null): string {
+  if (!analytics) return ''
+  const dailyCounts = analytics.points.map((point) => point.count).join(', ')
+  return `${analytics.total} events in the last seven days. Daily counts: ${dailyCounts}. ${comparisonText(analytics)}.`
+}
+</script>
+
+<template>
+  <span
+    ref="root"
+    class="wave-counter"
+    :data-open-source="openSource"
+    :data-stats-open="wave.statsOpen.value || undefined"
+  >
+    <button
+      ref="trigger"
+      class="wave-counter__trigger"
+      type="button"
+      :aria-label="triggerLabel"
+      :aria-haspopup="wave.statsEnabled.value ? 'dialog' : undefined"
+      :aria-expanded="wave.statsEnabled.value ? wave.statsOpen.value : undefined"
+      :aria-controls="wave.statsOpen.value ? `${counterKey}-wave-stats` : undefined"
+      :aria-busy="wave.pendingIncrements.value > 0 || undefined"
+      @click="increment"
+      @contextmenu="handleContextMenu"
+      @keydown="handleTriggerKeydown"
+      @pointerdown="handlePointerDown"
+      @pointermove="handlePointerMove"
+      @pointerup="cancelLongPress"
+      @pointercancel="cancelLongPress"
+    >
+      <span class="wave-counter__icon" aria-hidden="true">
+        <slot name="icon">
+          <component :is="icon" :size="18" :stroke-width="1.8" />
+        </slot>
+      </span>
+      <slot :total="total ?? 0" :pending="wave.pendingIncrements.value" :unavailable="unavailable">
+        <span data-total class="wave-counter__total">{{ total ?? '—' }}</span>
+      </slot>
+      <span v-if="unavailable" class="wave-counter__sr-only" role="status">Counter unavailable</span>
+    </button>
+
+    <Transition name="wave-popover">
+      <section
+        v-if="wave.statsOpen.value"
+        :id="`${counterKey}-wave-stats`"
+        class="wave-counter__popover"
+        role="dialog"
+        :aria-label="title"
+        tabindex="-1"
+        @keydown="handlePopoverKeydown"
+      >
+        <slot
+          name="analytics"
+          :analytics="wave.analytics.value"
+          :loading="wave.analyticsLoading.value"
+          :error="wave.analyticsError.value"
+          :retry="retryAnalytics"
+        >
+          <div class="wave-counter__heading">
+            <div>
+              <p class="wave-counter__eyebrow">Seven day activity</p>
+              <h2>{{ capitalize(counterKey) }}</h2>
+            </div>
+            <button class="wave-counter__close" type="button" aria-label="Close statistics" @click="closeAndRestoreFocus">
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+
+          <div v-if="wave.analyticsLoading.value" class="wave-counter__loading" role="status">
+            Loading activity
+          </div>
+          <div v-else-if="wave.analyticsError.value" class="wave-counter__error" role="alert">
+            <p>Activity is unavailable.</p>
+            <button type="button" @click="retryAnalytics">Try again</button>
+          </div>
+          <div v-else-if="wave.analytics.value" class="wave-counter__analytics">
+            <div class="wave-counter__summary-row">
+              <strong>{{ wave.analytics.value.total }}</strong>
+              <span>events</span>
+            </div>
+            <p data-comparison class="wave-counter__comparison">{{ comparison }}</p>
+            <AnalyticsChart
+              :analytics="wave.analytics.value"
+              :animate="openSource === 'pointer'"
+            />
+            <p class="wave-counter__range">{{ dateRange }}</p>
+            <p data-accessible-summary class="wave-counter__sr-only">
+              {{ accessibleSummary }}
+            </p>
+          </div>
+        </slot>
+      </section>
+    </Transition>
+  </span>
+</template>
