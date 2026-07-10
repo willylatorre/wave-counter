@@ -6,4 +6,7 @@ dist/
 *.sqlite3
 *.py[cod]
 *.so
+*.node
 __pycache__/
+packages/node/index.d.ts
+packages/node/index.js

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wave-counter-core", "python/wave-counter"]
+members = ["crates/wave-counter-core", "packages/node", "python/wave-counter"]
 resolver = "2"
 
 [workspace.package]
