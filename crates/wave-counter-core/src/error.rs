@@ -1,0 +1,61 @@
+use rusqlite::{Error as SqliteError, ErrorCode as SqliteErrorCode};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErrorCode {
+    InvalidCounterKey,
+    InvalidEventId,
+    InvalidAnalyticsWindow,
+    Busy,
+    Configuration,
+    Storage,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum WaveCounterError {
+    #[error("counter key must match [a-z0-9][a-z0-9_-]{{0,63}}")]
+    InvalidCounterKey,
+    #[error("event ID must be a UUIDv7")]
+    InvalidEventId,
+    #[error("analytics window is not supported")]
+    InvalidAnalyticsWindow,
+    #[error("database remained busy after the configured timeout")]
+    Busy,
+    #[error("invalid database configuration: {0}")]
+    Configuration(String),
+    #[error("storage operation failed")]
+    Storage(#[source] SqliteError),
+}
+
+impl WaveCounterError {
+    #[must_use]
+    pub const fn code(&self) -> ErrorCode {
+        match self {
+            Self::InvalidCounterKey => ErrorCode::InvalidCounterKey,
+            Self::InvalidEventId => ErrorCode::InvalidEventId,
+            Self::InvalidAnalyticsWindow => ErrorCode::InvalidAnalyticsWindow,
+            Self::Busy => ErrorCode::Busy,
+            Self::Configuration(_) => ErrorCode::Configuration,
+            Self::Storage(_) => ErrorCode::Storage,
+        }
+    }
+}
+
+impl From<SqliteError> for WaveCounterError {
+    fn from(error: SqliteError) -> Self {
+        match &error {
+            SqliteError::SqliteFailure(details, _)
+                if matches!(
+                    details.code,
+                    SqliteErrorCode::DatabaseBusy | SqliteErrorCode::DatabaseLocked
+                ) =>
+            {
+                Self::Busy
+            }
+            _ => Self::Storage(error),
+        }
+    }
+}
+
+pub type Result<T> = std::result::Result<T, WaveCounterError>;
