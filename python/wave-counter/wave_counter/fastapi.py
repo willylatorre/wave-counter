@@ -49,11 +49,21 @@ def create_router(counter: Counter, authorize: Authorize | None = None) -> APIRo
             return error_response(error)
 
     @router.post("/counters/{key}/events", response_model=None)
-    async def record_event(
-        request: Request, key: str, body: EventBody
-    ) -> CounterSnapshot | JSONResponse:
+    async def record_event(request: Request, key: str) -> CounterSnapshot | JSONResponse:
         if not await allowed(request):
             return forbidden()
+        try:
+            body = EventBody.model_validate(await request.json())
+        except Exception:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "code": "invalid_event_id",
+                        "message": "event ID must be a UUIDv7",
+                    }
+                },
+            )
         try:
             result = counter.record_event(key, body.event_id)
             return JSONResponse(

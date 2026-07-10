@@ -54,9 +54,24 @@ def test_domain_validation_errors_are_400(tmp_path: Path) -> None:
     )
     invalid_window = client.get("/api/waves/counters/coffee/analytics?window=30d")
 
+    malformed_payloads = [
+        client.post("/api/waves/counters/coffee/events", json={}),
+        client.post("/api/waves/counters/coffee/events", json={"eventId": 7}),
+        client.post(
+            "/api/waves/counters/coffee/events",
+            content="{",
+            headers={"content-type": "application/json"},
+        ),
+    ]
+
     assert invalid_key.status_code == 400
     assert invalid_id.status_code == 400
     assert invalid_window.status_code == 400
+    assert all(response.status_code == 400 for response in malformed_payloads)
+    assert all(
+        response.json()["error"]["code"] == "invalid_event_id"
+        for response in malformed_payloads
+    )
     assert invalid_window.json() == {
         "error": {
             "code": "invalid_analytics_window",

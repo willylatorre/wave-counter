@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:tooling
+      - run: npm run check
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  python:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - run: uv run --project python/wave-counter --frozen --python ${{ matrix.python }} pytest -q
+      - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.14'
+        run: uv run --project python/wave-counter --frozen ruff check python/wave-counter apps/playground/server
+      - if: matrix.os == 'ubuntu-latest' && matrix.python == '3.14'
+        run: uv run --project python/wave-counter --frozen mypy python/wave-counter/wave_counter apps/playground/server
+
+  node:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm test --workspace @wave-counter/node
+      - run: npm test --workspace @wave-counter/client
+      - run: npm test --workspace @wave-counter/vue
+      - run: npm run typecheck --workspaces --if-present
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: '3.14'
+          enable-cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test --workspace @wave-counter/playground
+
+  package-smoke:
+    name: Package smoke on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: '3.14'
+          enable-cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm run build --workspace @wave-counter/node
+      - run: npm run build --workspace @wave-counter/client
+      - run: npm run build --workspace @wave-counter/vue
+      - run: mkdir -p dist/npm dist/python
+        shell: bash
+      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/node
+      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/client
+      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/vue
+      - run: uv run --project python/wave-counter --frozen maturin build --release --out dist/python
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-smoke-${{ runner.os }}
+          path: dist
+
+  runtime-smoke-node:
+    name: Node ${{ matrix.node }} runtime install on ${{ matrix.os }}
+    needs: package-smoke
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-smoke-${{ runner.os }}
+          path: artifacts
+      - run: |
+          mkdir runtime-smoke
+          cd runtime-smoke
+          npm init -y
+          npm install ../artifacts/npm/*.tgz
+          node --input-type=module -e "import { WaveCounter } from '@wave-counter/node'; const counter = new WaveCounter({ databasePath: './smoke.sqlite3' }); const result = await counter.recordEvent('coffee', '0198f2f7-6d42-7d94-b1a6-e4305543f132'); if (result.counter.total !== 1) process.exit(1)"
+        shell: bash
+
+  runtime-smoke-python:
+    name: Python ${{ matrix.python }} runtime install on ${{ matrix.os }}
+    needs: package-smoke
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: astral-sh/setup-uv@v8
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v7
+        with:
+          name: package-smoke-${{ runner.os }}
+          path: artifacts
+      - run: |
+          uv venv runtime-smoke-python --python ${{ matrix.python }}
+          uv pip install --python runtime-smoke-python artifacts/python/*.whl
+          PYTHON=runtime-smoke-python/bin/python
+          if [ "${{ runner.os }}" = "Windows" ]; then PYTHON=runtime-smoke-python/Scripts/python.exe; fi
+          "$PYTHON" -c "from wave_counter import WaveCounter; counter = WaveCounter(database_path='python-smoke.sqlite3'); result = counter.record_event('coffee', '0198f2f7-6d42-7d94-b1a6-e4305543f132'); assert result['counter']['total'] == 1"
+        shell: bash

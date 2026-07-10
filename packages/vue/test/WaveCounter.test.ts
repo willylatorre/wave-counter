@@ -121,16 +121,70 @@ test('opens after deliberate long press and cancels when touch moves', async () 
   const wrapper = mountCounter()
   await flushPromises()
   const button = wrapper.get('button')
+  const setPointerCapture = vi.fn()
+  const releasePointerCapture = vi.fn()
+  Object.assign(button.element, { setPointerCapture, releasePointerCapture })
 
-  await button.trigger('pointerdown', { pointerType: 'touch', clientX: 4, clientY: 4 })
+  await button.trigger('pointerdown', { pointerId: 3, pointerType: 'touch', clientX: 4, clientY: 4 })
+  expect(setPointerCapture).toHaveBeenCalledWith(3)
   await button.trigger('pointermove', { pointerType: 'touch', clientX: 20, clientY: 4 })
   await vi.advanceTimersByTimeAsync(600)
   expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  expect(releasePointerCapture).toHaveBeenCalledWith(3)
 
-  await button.trigger('pointerdown', { pointerType: 'touch', clientX: 4, clientY: 4 })
+  await button.trigger('pointerdown', { pointerId: 4, pointerType: 'touch', clientX: 4, clientY: 4 })
   await vi.advanceTimersByTimeAsync(600)
   await flushPromises()
   expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
+})
+
+test('draws the analytics line once on each pointer opening', async () => {
+  const wrapper = mountCounter()
+  await flushPromises()
+  const button = wrapper.get('button')
+
+  await button.trigger('contextmenu')
+  await flushPromises()
+  expect(wrapper.get('.wave-chart').attributes('data-animate')).toBe('true')
+  await wrapper.get('.wave-counter__close').trigger('click')
+  await button.trigger('contextmenu')
+  await flushPromises()
+
+  expect(wrapper.get('.wave-chart').attributes('data-animate')).toBe('true')
+})
+
+test('clamps the popover horizontally inside the viewport', async () => {
+  const wrapper = mountCounter()
+  await flushPromises()
+  const button = wrapper.get('button')
+  vi.spyOn(button.element, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 10,
+    left: 0,
+    right: 48,
+    top: 10,
+    bottom: 54,
+    width: 48,
+    height: 44,
+    toJSON: () => ({}),
+  })
+
+  await button.trigger('contextmenu')
+  await flushPromises()
+
+  expect(wrapper.get('[role="dialog"]').attributes('style')).toContain('--wave-popover-offset-x:')
+})
+
+test('positions the loading popover before analytics resolves', async () => {
+  const getAnalytics = vi.fn().mockReturnValue(new Promise<Analytics>(() => {}))
+  const wrapper = mountCounter(transport({ getAnalytics }))
+  await flushPromises()
+  const opening = wrapper.get('button').trigger('contextmenu')
+  await wrapper.vm.$nextTick()
+  await wrapper.vm.$nextTick()
+
+  expect(wrapper.get('[role="dialog"]').attributes('style')).toContain('--wave-popover-offset-x:')
+  void opening
 })
 
 test('restores normal context menus and closes when stats are disabled', async () => {
@@ -170,6 +224,13 @@ test('supports icon, button, and analytics slots', async () => {
   expect(wrapper.find('[data-custom-analytics]').exists()).toBe(true)
 })
 
+test('renders the lightweight default coffee icon', async () => {
+  const wrapper = mountCounter()
+  await flushPromises()
+
+  expect(wrapper.get('[data-wave-coffee-icon]').element.tagName).toBe('svg')
+})
+
 test('duplicates chart information as text and hides the SVG from assistive technology', async () => {
   const wrapper = mountCounter()
   await flushPromises()
@@ -188,7 +249,12 @@ test('defines reduced-motion, reduced-transparency, contrast, and fine-pointer r
   expect(styles).toContain('@media (prefers-reduced-transparency: reduce)')
   expect(styles).toContain('@media (prefers-contrast: more)')
   expect(styles).toContain('@media (hover: hover) and (pointer: fine)')
+  expect(styles).toContain('--wave-counter-press-duration')
+  expect(styles).toContain('--wave-counter-popover-duration')
+  expect(styles).toContain('--wave-counter-active-duration')
+  expect(styles).toContain('--wave-counter-motion-easing')
+  expect(styles).toContain('box-sizing: border-box')
   expect(styles).toContain('left: 50%')
-  expect(styles).toContain('transform: translateX(-50%)')
+  expect(styles).toContain('--wave-popover-offset-x')
   expect(styles).not.toContain('transition: all')
 })

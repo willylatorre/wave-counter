@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:tooling
+      - run: npm run check
+      - name: Match tag to coordinated version
+        run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
+
+  python-wheels:
+    needs: verify
+    name: Python wheel on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist --manifest-path python/wave-counter/Cargo.toml
+          manylinux: auto
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: dist/*
+          if-no-files-found: error
+
+  node-prebuilds:
+    needs: verify
+    name: Node prebuild on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm run build:native --workspace @wave-counter/node
+      - uses: actions/upload-artifact@v7
+        with:
+          name: node-prebuild-${{ matrix.os }}
+          path: packages/node/*.node
+          if-no-files-found: error
+
+  publish-pypi:
+    needs: python-wheels
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wave-counter
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: python-wheels-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-npm:
+    needs: node-prebuilds
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@wave-counter/vue
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      NPM_SCOPE: ${{ vars.WAVE_COUNTER_NPM_SCOPE }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm install --global npm@11.8.0
+      - run: npm ci
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: node-prebuild-*
+          path: packages/node
+          merge-multiple: true
+      - run: npm run build:ts --workspace @wave-counter/node
+      - run: npm run build --workspace @wave-counter/client
+      - run: npm run build --workspace @wave-counter/vue
+      - run: node tooling/set-npm-scope.mjs "${NPM_SCOPE:-@wave-counter}"
+      - run: npm publish ./packages/client
+      - run: npm publish ./packages/node
+      - run: npm publish ./packages/vue

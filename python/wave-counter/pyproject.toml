@@ -9,7 +9,21 @@ description = "Self-hosted anonymous counters backed by Rust and SQLite"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+authors = [{ name = "Adrian Latorre" }]
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/willylatorre/wave-counter"
+Repository = "https://github.com/willylatorre/wave-counter"
+Issues = "https://github.com/willylatorre/wave-counter/issues"
 
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.116,<1"]

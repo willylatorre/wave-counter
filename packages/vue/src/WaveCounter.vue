@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
-import { Coffee } from '@lucide/vue'
-
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import type { Analytics, WaveCounterTransport } from '@wave-counter/client'
 
 import AnalyticsChart from './AnalyticsChart.vue'
+import CoffeeIcon from './CoffeeIcon.vue'
 import { useWaveCounter } from './useWaveCounter.js'
 
 const props = withDefaults(
@@ -17,7 +16,7 @@ const props = withDefaults(
     transport?: WaveCounterTransport
   }>(),
   {
-    icon: () => Coffee,
+    icon: () => CoffeeIcon,
     showStats: true,
     longPressMs: 550,
   },
@@ -29,7 +28,10 @@ const emit = defineEmits<{
 
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
+const popover = ref<HTMLElement | null>(null)
 const openSource = ref<'pointer' | 'keyboard'>('pointer')
+const animateChart = ref(false)
+const popoverStyle = ref<Record<string, string>>({})
 const wave = useWaveCounter({
   counterKey: props.counterKey,
   endpoint: props.endpoint,
@@ -38,6 +40,7 @@ const wave = useWaveCounter({
 })
 let longPressTimer: ReturnType<typeof setTimeout> | undefined
 let pointerStart: { x: number; y: number } | undefined
+let capturedPointerId: number | undefined
 let longPressActivated = false
 
 const total = computed(() => wave.counter.value?.total)
@@ -61,12 +64,14 @@ watch(
 
 onMounted(() => {
   document.addEventListener('pointerdown', handleOutsidePointer)
+  window.addEventListener('resize', updatePopoverPosition)
   void wave.load().catch(emitError)
 })
 
 onBeforeUnmount(() => {
   cancelLongPress()
   document.removeEventListener('pointerdown', handleOutsidePointer)
+  window.removeEventListener('resize', updatePopoverPosition)
 })
 
 async function increment(): Promise<void> {
@@ -84,8 +89,14 @@ async function increment(): Promise<void> {
 async function openStats(source: 'pointer' | 'keyboard'): Promise<void> {
   if (!wave.statsEnabled.value) return
   openSource.value = source
+  animateChart.value = source === 'pointer'
+  const opening = wave.openStats()
+  await nextTick()
+  updatePopoverPosition()
   try {
-    await wave.openStats()
+    await opening
+    await nextTick()
+    updatePopoverPosition()
   } catch {
     // Analytics errors stay inside the popover and retry in place.
   }
@@ -118,18 +129,23 @@ function handlePopoverKeydown(event: KeyboardEvent): void {
 
 function closeAndRestoreFocus(): void {
   wave.closeStats()
+  animateChart.value = false
   trigger.value?.focus({ preventScroll: true })
 }
 
 function handleOutsidePointer(event: PointerEvent): void {
   if (!wave.statsOpen.value || root.value?.contains(event.target as Node)) return
   wave.closeStats()
+  animateChart.value = false
 }
 
 function handlePointerDown(event: PointerEvent): void {
   if (event.pointerType !== 'touch' || !wave.statsEnabled.value) return
   cancelLongPress()
   pointerStart = { x: event.clientX, y: event.clientY }
+  capturedPointerId = event.pointerId
+  event.currentTarget instanceof HTMLButtonElement &&
+    event.currentTarget.setPointerCapture?.(event.pointerId)
   longPressActivated = false
   longPressTimer = setTimeout(() => {
     longPressActivated = true
@@ -147,6 +163,34 @@ function cancelLongPress(): void {
   if (longPressTimer !== undefined) clearTimeout(longPressTimer)
   longPressTimer = undefined
   pointerStart = undefined
+  if (capturedPointerId !== undefined) {
+    try {
+      trigger.value?.releasePointerCapture?.(capturedPointerId)
+    } catch {
+      // Capture may already have ended after pointerup or pointercancel.
+    }
+  }
+  capturedPointerId = undefined
+}
+
+function updatePopoverPosition(): void {
+  if (!wave.statsOpen.value || !trigger.value || !popover.value) return
+  const triggerRect = trigger.value.getBoundingClientRect()
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const gutter = rootFontSize
+  const measuredWidth = popover.value.getBoundingClientRect().width
+  const width =
+    measuredWidth > 0
+      ? measuredWidth
+      : Math.min(20 * rootFontSize, Math.max(0, window.innerWidth - gutter * 2))
+  const centeredLeft = triggerRect.left + triggerRect.width / 2 - width / 2
+  const clampedLeft = Math.min(
+    Math.max(gutter, centeredLeft),
+    Math.max(gutter, window.innerWidth - width - gutter),
+  )
+  popoverStyle.value = {
+    '--wave-popover-offset-x': `${clampedLeft - centeredLeft}px`,
+  }
 }
 
 function emitError(error: unknown): void {
@@ -236,8 +280,10 @@ function summaryText(analytics: Analytics | null): string {
     <Transition name="wave-popover">
       <section
         v-if="wave.statsOpen.value"
+        ref="popover"
         :id="`${counterKey}-wave-stats`"
         class="wave-counter__popover"
+        :style="popoverStyle"
         role="dialog"
         :aria-label="title"
         tabindex="-1"
@@ -275,7 +321,7 @@ function summaryText(analytics: Analytics | null): string {
             <p data-comparison class="wave-counter__comparison">{{ comparison }}</p>
             <AnalyticsChart
               :analytics="wave.analytics.value"
-              :animate="openSource === 'pointer'"
+              :animate="animateChart"
             />
             <p class="wave-counter__range">{{ dateRange }}</p>
             <p data-accessible-summary class="wave-counter__sr-only">

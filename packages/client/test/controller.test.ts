@@ -40,6 +40,50 @@ test('loads the authoritative counter and notifies subscribers', async () => {
   expect(controller.snapshot).toMatchObject({ loading: false, counter: zero, error: null })
 })
 
+test('does not let a stale initial load overwrite a completed increment', async () => {
+  let resolveLoad!: (counter: CounterSnapshot) => void
+  const pendingLoad = new Promise<CounterSnapshot>((resolve) => {
+    resolveLoad = resolve
+  })
+  const controller = new WaveCounterController(
+    'coffee',
+    transport({
+      getCounter: vi.fn().mockReturnValue(pendingLoad),
+      increment: vi.fn().mockResolvedValue({
+        ...zero,
+        total: 8,
+        updatedAt: '2026-07-10T13:42:00Z',
+      }),
+    }),
+  )
+
+  const load = controller.load()
+  await controller.increment()
+  resolveLoad({ ...zero, total: 7, updatedAt: '2026-07-10T13:41:00Z' })
+  await load
+
+  expect(controller.snapshot.counter?.total).toBe(8)
+})
+
+test('does not mutate snapshots retained by subscribers', async () => {
+  let resolveIncrement!: (counter: CounterSnapshot) => void
+  const pending = new Promise<CounterSnapshot>((resolve) => {
+    resolveIncrement = resolve
+  })
+  const controller = new WaveCounterController(
+    'coffee',
+    transport({ increment: vi.fn().mockReturnValue(pending) }),
+  )
+  await controller.load()
+  const beforeIncrement = controller.snapshot
+
+  const increment = controller.increment()
+
+  expect(beforeIncrement.pendingIncrements).toBe(0)
+  resolveIncrement({ ...zero, total: 1 })
+  await increment
+})
+
 test('increments optimistically then reconciles to the authoritative total', async () => {
   let resolveIncrement!: (counter: CounterSnapshot) => void
   const pending = new Promise<CounterSnapshot>((resolve) => {

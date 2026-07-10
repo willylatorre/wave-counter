@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -20,6 +21,16 @@ afterEach(async () => {
 })
 
 describe('WaveCounter', () => {
+  test('defers database initialization to the first asynchronous task', async () => {
+    const path = await databasePath()
+
+    const counter = new WaveCounter({ databasePath: path })
+
+    expect(existsSync(path)).toBe(false)
+    await counter.getCounter('coffee')
+    expect(existsSync(path)).toBe(true)
+  })
+
   test('reads, records, and replays through asynchronous native tasks', async () => {
     const counter = new WaveCounter({
       databasePath: await databasePath(),
@@ -54,4 +65,3 @@ describe('WaveCounter', () => {
     await expect(operation(counter)).rejects.toMatchObject<WaveCounterError>({ code })
   })
 })
-

@@ -9,7 +9,11 @@
   --wave-error: var(--wave-counter-error, oklch(55% 0.17 25));
   --wave-radius: var(--wave-counter-radius, 0.875rem);
   --wave-popover-radius: var(--wave-counter-popover-radius, 1.125rem);
-  --wave-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --wave-ease-out: var(--wave-counter-motion-easing, cubic-bezier(0.23, 1, 0.32, 1));
+  --wave-press-duration: var(--wave-counter-press-duration, 130ms);
+  --wave-active-duration: var(--wave-counter-active-duration, 80ms);
+  --wave-popover-duration: var(--wave-counter-popover-duration, 240ms);
+  --wave-popover-exit-duration: var(--wave-counter-popover-exit-duration, 160ms);
   position: relative;
   display: inline-flex;
   color: var(--wave-ink);
@@ -34,14 +38,14 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition:
-    transform 130ms var(--wave-ease-out),
-    border-color 130ms ease,
-    background-color 130ms ease;
+    transform var(--wave-press-duration) var(--wave-ease-out),
+    border-color var(--wave-press-duration) ease,
+    background-color var(--wave-press-duration) ease;
 }
 
 .wave-counter__trigger:active {
   transform: scale(0.97);
-  transition-duration: 80ms;
+  transition-duration: var(--wave-active-duration);
 }
 
 .wave-counter__trigger:focus-visible,
@@ -73,6 +77,7 @@
 }
 
 .wave-counter__popover {
+  box-sizing: border-box;
   position: absolute;
   z-index: 1000;
   top: calc(100% + 0.5rem);
@@ -86,26 +91,27 @@
   box-shadow:
     0 1px 2px oklch(28% 0.018 215 / 0.08),
     0 14px 34px oklch(28% 0.018 215 / 0.14);
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px)));
   transform-origin: top center;
 }
 
 .wave-popover-enter-active {
   transition:
-    opacity 240ms var(--wave-ease-out),
-    transform 240ms var(--wave-ease-out);
+    opacity var(--wave-popover-duration) var(--wave-ease-out),
+    transform var(--wave-popover-duration) var(--wave-ease-out);
 }
 
 .wave-popover-leave-active {
   transition:
-    opacity 160ms var(--wave-ease-out),
-    transform 160ms var(--wave-ease-out);
+    opacity var(--wave-popover-exit-duration) var(--wave-ease-out),
+    transform var(--wave-popover-exit-duration) var(--wave-ease-out);
 }
 
 .wave-popover-enter-from,
 .wave-popover-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-0.25rem) scale(0.97);
+  transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px))) translateY(-0.25rem)
+    scale(0.97);
 }
 
 .wave-counter[data-open-source='keyboard'] .wave-popover-enter-active,
@@ -217,7 +223,7 @@
 .wave-chart[data-animate] .wave-chart__line {
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: wave-line-draw 240ms var(--wave-ease-out) both;
+  animation: wave-line-draw var(--wave-popover-duration) var(--wave-ease-out) both;
 }
 
 .wave-chart__point {
@@ -308,7 +314,7 @@
 
   .wave-popover-enter-from,
   .wave-popover-leave-to {
-    transform: translateX(-50%);
+    transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px)));
   }
 
   .wave-counter__trigger:active {

@@ -58,7 +58,8 @@ export class WaveCounterController {
   async load(): Promise<void> {
     this.#update({ loading: true, error: null })
     try {
-      this.#authoritative = await this.#transport.getCounter(this.#key)
+      const counter = await this.#transport.getCounter(this.#key)
+      this.#authoritative = latestCounter(this.#authoritative, counter)
       this.#syncCounter({ loading: false })
     } catch (caught) {
       this.#update({ loading: false, error: asError(caught) })
@@ -67,16 +68,19 @@ export class WaveCounterController {
   }
 
   async increment(): Promise<void> {
-    this.#state.pendingIncrements += 1
-    this.#syncCounter({ error: null })
+    this.#syncCounter({
+      pendingIncrements: this.#state.pendingIncrements + 1,
+      error: null,
+    })
     try {
       const counter = await this.#transport.increment(this.#key)
       this.#authoritative = latestCounter(this.#authoritative, counter)
-      this.#state.pendingIncrements -= 1
-      this.#syncCounter()
+      this.#syncCounter({ pendingIncrements: this.#state.pendingIncrements - 1 })
     } catch (caught) {
-      this.#state.pendingIncrements -= 1
-      this.#syncCounter({ error: asError(caught) })
+      this.#syncCounter({
+        pendingIncrements: this.#state.pendingIncrements - 1,
+        error: asError(caught),
+      })
       throw caught
     }
   }
@@ -114,8 +118,9 @@ export class WaveCounterController {
 
   #syncCounter(update: Partial<WaveCounterState> = {}): void {
     const base = this.#authoritative ?? { key: this.#key, total: 0, updatedAt: null }
+    const pendingIncrements = update.pendingIncrements ?? this.#state.pendingIncrements
     this.#update({
-      counter: { ...base, total: base.total + this.#state.pendingIncrements },
+      counter: { ...base, total: base.total + pendingIncrements },
       ...update,
     })
   }
@@ -137,4 +142,3 @@ function latestCounter(
 function asError(caught: unknown): Error {
   return caught instanceof Error ? caught : new Error(String(caught))
 }
-

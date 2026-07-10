@@ -2,6 +2,12 @@
   "name": "@wave-counter/node",
   "version": "0.1.0",
   "description": "Native Node and Express integration for Wave Counter",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/willylatorre/wave-counter.git",
+    "directory": "packages/node"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,6 +35,9 @@
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "express": "^5.1.0"
   },
@@ -42,4 +51,3 @@
     "vitest": "^3.2.4"
   }
 }
-
