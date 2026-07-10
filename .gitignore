@@ -4,3 +4,6 @@ node_modules/
 .venv/
 dist/
 *.sqlite3
+*.py[cod]
+*.so
+__pycache__/
