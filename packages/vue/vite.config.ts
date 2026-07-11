@@ -12,7 +12,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['vue', '@wave-counter/client', '@lucide/vue'],
+      external: ['vue', '@wave-counter/client'],
       output: { assetFileNames: 'styles.css' },
     },
   },

@@ -6,7 +6,7 @@ The source integration is implemented in `/Users/a2023362/workspace/fun/adrianla
 
 - [ ] Record the authoritative deployed coffee total and the exact durable `DB_PATH`.
 - [ ] Back up the SQLite file and verify the backup can be opened.
-- [x] Pin `wave-counter[fastapi]`, `@wave-counter/client`, and `@wave-counter/vue` at coordinated version `0.1.0` (npm tarballs are vendored until the first registry release).
+- [x] Pin `wave-counter[fastapi]`, `@wave-counter/client`, and `@wave-counter/vue` at coordinated version `0.1.0`; local tarball links are reserved for development and test loops only.
 - [x] Keep the legacy SQLite `coffee` table intact for rollback and one-time baseline discovery.
 
 ## Backend integration

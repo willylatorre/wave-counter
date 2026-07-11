@@ -68,7 +68,6 @@ npm install @wave-counter/vue @wave-counter/client vue
 
 ```vue
 <script setup lang="ts">
-import { Coffee } from '@lucide/vue'
 import { WaveCounter } from '@wave-counter/vue'
 import '@wave-counter/vue/styles.css'
 </script>
@@ -77,7 +76,6 @@ import '@wave-counter/vue/styles.css'
   <WaveCounter
     counter-key="coffee"
     endpoint="/api/waves"
-    :icon="Coffee"
     :show-stats="true"
     @error="console.error"
   />
