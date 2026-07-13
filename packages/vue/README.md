@@ -51,6 +51,7 @@ GET  /counters/{key}/analytics?window=7d
 | --- | --- | --- | --- |
 | `counterKey` | `string` | Required | Counter key sent to the API. |
 | `endpoint` | `string` | Required | Base URL where Wave Counter routes are mounted. |
+| `theme` | `'auto' \| 'light' \| 'dark'` | `'auto'` | Color mode. Auto follows `prefers-color-scheme`; explicit light and dark ignore the OS setting. |
 | `icon` | `Component` | Coffee icon | Component rendered inside the trigger. |
 | `showStats` | `boolean` | `true` | Enables analytics interactions and popover. |
 | `longPressMs` | `number` | `550` | Touch long-press delay before opening analytics. |
@@ -132,20 +133,39 @@ Import the default stylesheet once:
 import '@waves-counter/vue/styles.css'
 ```
 
+Choose a color mode with `theme`. The default is `auto`, which follows the visitor's OS preference.
+
+```vue
+<WaveCounter counter-key="coffee" endpoint="/api/waves" theme="auto" />
+<WaveCounter counter-key="coffee" endpoint="/api/waves" theme="light" />
+<WaveCounter counter-key="coffee" endpoint="/api/waves" theme="dark" />
+```
+
 Theme with CSS custom properties on the component or a parent element:
 
 ```css
 .my-counter {
   --wave-counter-ink: oklch(24% 0.02 250);
   --wave-counter-muted: oklch(54% 0.03 250);
-  --wave-counter-surface: white;
-  --wave-counter-raised: white;
+  --wave-counter-surface: oklch(98% 0.006 250);
+  --wave-counter-raised: oklch(99% 0.004 250);
   --wave-counter-border: oklch(88% 0.02 250);
   --wave-counter-color: oklch(68% 0.16 205);
   --wave-counter-color-strong: oklch(48% 0.15 205);
   --wave-counter-radius: 999px;
   --wave-counter-popover-radius: 1rem;
   --wave-counter-popover-duration: 220ms;
+}
+```
+
+For theme-specific overrides, set the base variables for both modes or use the `*-dark` fallbacks:
+
+```css
+.my-counter {
+  --wave-counter-surface: oklch(98% 0.006 250);
+  --wave-counter-surface-dark: oklch(25% 0.018 250);
+  --wave-counter-color: oklch(62% 0.14 205);
+  --wave-counter-color-dark: oklch(74% 0.11 205);
 }
 ```
 

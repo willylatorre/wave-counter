@@ -6,16 +6,20 @@ import AnalyticsChart from './AnalyticsChart.vue'
 import CoffeeIcon from './CoffeeIcon.vue'
 import { useWaveCounter } from './useWaveCounter.js'
 
+type WaveCounterTheme = 'auto' | 'light' | 'dark'
+
 const props = withDefaults(
   defineProps<{
     counterKey: string
     endpoint: string
+    theme?: WaveCounterTheme
     icon?: Component
     showStats?: boolean
     longPressMs?: number
     transport?: WaveCounterTransport
   }>(),
   {
+    theme: 'auto',
     icon: () => CoffeeIcon,
     showStats: true,
     longPressMs: 550,
@@ -248,6 +252,7 @@ function summaryText(analytics: Analytics | null): string {
     class="wave-counter"
     :data-open-source="openSource"
     :data-stats-open="wave.statsOpen.value || undefined"
+    :data-theme="theme"
   >
     <button
       ref="trigger"

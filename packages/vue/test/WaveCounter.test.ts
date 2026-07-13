@@ -231,6 +231,20 @@ test('renders the lightweight default coffee icon', async () => {
   expect(wrapper.get('[data-wave-coffee-icon]').element.tagName).toBe('svg')
 })
 
+test('supports auto, light, and dark theme modes', async () => {
+  const auto = mountCounter()
+  await flushPromises()
+  expect(auto.attributes('data-theme')).toBe('auto')
+
+  const light = mountCounter(transport(), { theme: 'light' })
+  await flushPromises()
+  expect(light.attributes('data-theme')).toBe('light')
+
+  const dark = mountCounter(transport(), { theme: 'dark' })
+  await flushPromises()
+  expect(dark.attributes('data-theme')).toBe('dark')
+})
+
 test('duplicates chart information as text and hides the SVG from assistive technology', async () => {
   const wrapper = mountCounter()
   await flushPromises()
@@ -245,6 +259,10 @@ test('duplicates chart information as text and hides the SVG from assistive tech
 test('defines reduced-motion, reduced-transparency, contrast, and fine-pointer rules', async () => {
   const styles = await readFile(resolve(process.cwd(), 'src/styles.css'), 'utf8')
 
+  expect(styles).toContain(".wave-counter[data-theme='light']")
+  expect(styles).toContain(".wave-counter[data-theme='dark']")
+  expect(styles).toContain(".wave-counter[data-theme='auto']")
+  expect(styles).toContain('@media (prefers-color-scheme: dark)')
   expect(styles).toContain('@media (prefers-reduced-motion: reduce)')
   expect(styles).toContain('@media (prefers-reduced-transparency: reduce)')
   expect(styles).toContain('@media (prefers-contrast: more)')
