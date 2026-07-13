@@ -27,6 +27,7 @@
   },
   "scripts": {
     "build": "vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly",
+    "pretest": "npm run build --workspace @waves-counter/client",
     "test": "vitest run",
     "typecheck": "vue-tsc -p tsconfig.json --noEmit"
   },

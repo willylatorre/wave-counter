@@ -122,7 +122,7 @@ jobs:
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/node
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/client
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/vue
-      - run: uv run --project python/wave-counter --frozen maturin build --release --out dist/python
+      - run: uv run --project python/wave-counter --frozen maturin build --release --manifest-path python/wave-counter/Cargo.toml --out dist/python
       - uses: actions/upload-artifact@v7
         with:
           name: package-smoke-${{ runner.os }}
