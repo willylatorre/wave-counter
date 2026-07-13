@@ -17,28 +17,28 @@ export async function validatePackages(rootInput) {
   )
 
   for (const [name, manifest] of manifests) {
-    if (manifest.license !== 'MIT') errors.push(`@wave-counter/${name} must declare MIT`)
+    if (manifest.license !== 'MIT') errors.push(`@waves-counter/${name} must declare MIT`)
     if (manifest.repository?.url !== REPOSITORY) {
-      errors.push(`@wave-counter/${name} must declare the canonical repository`)
+      errors.push(`@waves-counter/${name} must declare the canonical repository`)
     }
     if (manifest.publishConfig?.access !== 'public') {
-      errors.push(`@wave-counter/${name} must publish with public access`)
+      errors.push(`@waves-counter/${name} must publish with public access`)
     }
-    if (!manifest.files?.includes('dist')) errors.push(`@wave-counter/${name} must ship dist`)
+    if (!manifest.files?.includes('dist')) errors.push(`@waves-counter/${name} must ship dist`)
   }
 
   const node = manifests.find(([name]) => name === 'node')?.[1]
   const client = manifests.find(([name]) => name === 'client')?.[1]
   const vue = manifests.find(([name]) => name === 'vue')?.[1]
-  if (!node?.files?.includes('*.node')) errors.push('@wave-counter/node must ship native binaries')
-  if (node?.engines?.node !== '>=20') errors.push('@wave-counter/node must support Node 20+')
-  if (!node?.exports?.['./express']) errors.push('@wave-counter/node must export its Express router')
-  if (!client?.exports?.['.']) errors.push('@wave-counter/client must export its browser client')
-  if (!vue?.exports?.['./styles.css']) errors.push('@wave-counter/vue must export default styles')
+  if (!node?.files?.includes('*.node')) errors.push('@waves-counter/node must ship native binaries')
+  if (node?.engines?.node !== '>=20') errors.push('@waves-counter/node must support Node 20+')
+  if (!node?.exports?.['./express']) errors.push('@waves-counter/node must export its Express router')
+  if (!client?.exports?.['.']) errors.push('@waves-counter/client must export its browser client')
+  if (!vue?.exports?.['./styles.css']) errors.push('@waves-counter/vue must export default styles')
   if (!vue?.peerDependencies?.vue?.startsWith('^3.5')) {
-    errors.push('@wave-counter/vue must declare Vue 3.5 as a peer')
+    errors.push('@waves-counter/vue must declare Vue 3.5 as a peer')
   }
-  if (vue?.dependencies?.vue) errors.push('@wave-counter/vue must not bundle Vue')
+  if (vue?.dependencies?.vue) errors.push('@waves-counter/vue must not bundle Vue')
 
   const python = await readFile(join(root, 'python/wave-counter/pyproject.toml'), 'utf8')
   if (!python.includes('requires-python = ">=3.10"')) {

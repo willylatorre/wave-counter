@@ -3,9 +3,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const PUBLIC_PACKAGES = [
-  ['@wave-counter/node', 'packages/node/package.json', 'json'],
-  ['@wave-counter/client', 'packages/client/package.json', 'json'],
-  ['@wave-counter/vue', 'packages/vue/package.json', 'json'],
+  ['@waves-counter/node', 'packages/node/package.json', 'json'],
+  ['@waves-counter/client', 'packages/client/package.json', 'json'],
+  ['@waves-counter/vue', 'packages/vue/package.json', 'json'],
   ['wave-counter', 'python/wave-counter/pyproject.toml', 'toml'],
 ]
 

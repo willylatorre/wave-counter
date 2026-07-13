@@ -1,5 +1,5 @@
 {
-  "name": "@wave-counter/vue",
+  "name": "@waves-counter/vue",
   "version": "0.1.0",
   "description": "Accessible Vue component and composable for Wave Counter",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "typecheck": "vue-tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@wave-counter/client": "0.1.0"
+    "@waves-counter/client": "0.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",

@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const ALLOWED_SCOPES = new Set(['@wave-counter', '@willylatorre'])
+const ALLOWED_SCOPES = new Set(['@waves-counter'])
 
 export function publicationManifests(manifests, scope) {
   if (!ALLOWED_SCOPES.has(scope)) {
@@ -12,16 +12,12 @@ export function publicationManifests(manifests, scope) {
   next.node.name = `${scope}/node`
   next.client.name = `${scope}/client`
   next.vue.name = `${scope}/vue`
-  if (scope !== '@wave-counter') {
-    next.vue.dependencies['@wave-counter/client'] =
-      `npm:${scope}/client@${next.vue.version}`
-  }
   return next
 }
 
 async function main() {
   const root = dirname(dirname(fileURLToPath(import.meta.url)))
-  const scope = process.argv[2] || '@wave-counter'
+  const scope = process.argv[2] || '@waves-counter'
   const paths = Object.fromEntries(
     ['node', 'client', 'vue'].map((name) => [name, join(root, `packages/${name}/package.json`)]),
   )
@@ -43,4 +39,3 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main()
-

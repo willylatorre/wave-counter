@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { WaveCounter } from '@wave-counter/vue'
+import { WaveCounter } from '@waves-counter/vue'
 
 type Backend = 'fastapi' | 'express'
 

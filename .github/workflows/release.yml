@@ -59,7 +59,7 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
-      - run: npm run build:native --workspace @wave-counter/node
+      - run: npm run build:native --workspace @waves-counter/node
       - uses: actions/upload-artifact@v7
         with:
           name: node-prebuild-${{ matrix.os }}
@@ -87,12 +87,10 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: npm
-      url: https://www.npmjs.com/package/@wave-counter/vue
+      url: https://www.npmjs.com/package/@waves-counter/vue
     permissions:
       contents: read
       id-token: write
-    env:
-      NPM_SCOPE: ${{ vars.WAVE_COUNTER_NPM_SCOPE }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -107,10 +105,10 @@ jobs:
           pattern: node-prebuild-*
           path: packages/node
           merge-multiple: true
-      - run: npm run build:ts --workspace @wave-counter/node
-      - run: npm run build --workspace @wave-counter/client
-      - run: npm run build --workspace @wave-counter/vue
-      - run: node tooling/set-npm-scope.mjs "${NPM_SCOPE:-@wave-counter}"
+      - run: npm run build:ts --workspace @waves-counter/node
+      - run: npm run build --workspace @waves-counter/client
+      - run: npm run build --workspace @waves-counter/vue
+      - run: node tooling/set-npm-scope.mjs
       - run: npm publish ./packages/client
       - run: npm publish ./packages/node
       - run: npm publish ./packages/vue

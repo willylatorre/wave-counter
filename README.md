@@ -35,12 +35,12 @@ app.include_router(
 ## Express
 
 ```bash
-npm install @wave-counter/node express
+npm install @waves-counter/node express
 ```
 
 ```ts
-import { WaveCounter } from '@wave-counter/node'
-import { createWaveRouter } from '@wave-counter/node/express'
+import { WaveCounter } from '@waves-counter/node'
+import { createWaveRouter } from '@waves-counter/node/express'
 import express from 'express'
 
 const app = express()
@@ -63,13 +63,13 @@ All Node database methods run as asynchronous native tasks rather than on the ev
 ## Vue
 
 ```bash
-npm install @wave-counter/vue @wave-counter/client vue
+npm install @waves-counter/vue @waves-counter/client vue
 ```
 
 ```vue
 <script setup lang="ts">
-import { WaveCounter } from '@wave-counter/vue'
-import '@wave-counter/vue/styles.css'
+import { WaveCounter } from '@waves-counter/vue'
+import '@waves-counter/vue/styles.css'
 </script>
 
 <template>
@@ -130,10 +130,10 @@ Required tools are Rust stable, Node 20 or newer, npm 11, Python 3.10 or newer, 
 npm install
 cargo test --workspace
 uv run --project python/wave-counter pytest
-npm test --workspace @wave-counter/client
-npm test --workspace @wave-counter/vue
-npm test --workspace @wave-counter/node
-npm test --workspace @wave-counter/playground
+npm test --workspace @waves-counter/client
+npm test --workspace @waves-counter/vue
+npm test --workspace @waves-counter/node
+npm test --workspace @waves-counter/playground
 ```
 
 `npm run check` validates coordinated versions, shared conformance scenarios, package manifests, and release workflows.
@@ -142,4 +142,4 @@ npm test --workspace @wave-counter/playground
 
 Tags named `v<version>` build Python wheels and Node prebuilds on Linux, macOS, and Windows. PyPI and npm publishing use OIDC trusted publishers. Configure the `release.yml` workflow as the trusted publisher for `wave-counter` on PyPI and each npm package before pushing the first tag.
 
-The default npm scope is `@wave-counter`. If that scope cannot be controlled, set the repository variable `WAVE_COUNTER_NPM_SCOPE` to `@willylatorre`; the release job rewrites publication metadata while preserving the internal package alias used by the compiled Vue bundle.
+The npm scope is `@waves-counter`. Configure the `release.yml` workflow as a trusted publisher for each npm package before pushing the first release tag.

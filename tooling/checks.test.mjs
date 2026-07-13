@@ -52,25 +52,22 @@ test('validates public package manifests and release workflows', async () => {
   assert.deepEqual(errors, [])
 })
 
-test('prepares the documented fallback npm scope without breaking Vue imports', () => {
+test('prepares the canonical npm scope', () => {
   const manifests = publicationManifests(
     {
-      node: { name: '@wave-counter/node' },
-      client: { name: '@wave-counter/client' },
+      node: { name: '@waves-counter/node' },
+      client: { name: '@waves-counter/client' },
       vue: {
-        name: '@wave-counter/vue',
+        name: '@waves-counter/vue',
         version: '0.1.0',
-        dependencies: { '@wave-counter/client': '0.1.0' },
+        dependencies: { '@waves-counter/client': '0.1.0' },
       },
     },
-    '@willylatorre',
+    '@waves-counter',
   )
 
-  assert.equal(manifests.node.name, '@willylatorre/node')
-  assert.equal(manifests.client.name, '@willylatorre/client')
-  assert.equal(manifests.vue.name, '@willylatorre/vue')
-  assert.equal(
-    manifests.vue.dependencies['@wave-counter/client'],
-    'npm:@willylatorre/client@0.1.0',
-  )
+  assert.equal(manifests.node.name, '@waves-counter/node')
+  assert.equal(manifests.client.name, '@waves-counter/client')
+  assert.equal(manifests.vue.name, '@waves-counter/vue')
+  assert.equal(manifests.vue.dependencies['@waves-counter/client'], '0.1.0')
 })

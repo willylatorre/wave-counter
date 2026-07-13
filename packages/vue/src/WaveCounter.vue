@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
-import type { Analytics, WaveCounterTransport } from '@wave-counter/client'
+import type { Analytics, WaveCounterTransport } from '@waves-counter/client'
 
 import AnalyticsChart from './AnalyticsChart.vue'
 import CoffeeIcon from './CoffeeIcon.vue'

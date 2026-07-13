@@ -14,7 +14,7 @@ import {
   type CounterSnapshot,
   type WaveCounterState,
   type WaveCounterTransport,
-} from '@wave-counter/client'
+} from '@waves-counter/client'
 
 export interface UseWaveCounterOptions {
   counterKey: string

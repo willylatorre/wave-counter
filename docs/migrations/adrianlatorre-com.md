@@ -6,7 +6,7 @@ The source integration is implemented in `/Users/a2023362/workspace/fun/adrianla
 
 - [ ] Record the authoritative deployed coffee total and the exact durable `DB_PATH`.
 - [ ] Back up the SQLite file and verify the backup can be opened.
-- [x] Pin `wave-counter[fastapi]`, `@wave-counter/client`, and `@wave-counter/vue` at coordinated version `0.1.0`; local tarball links are reserved for development and test loops only.
+- [x] Pin `wave-counter[fastapi]`, `@waves-counter/client`, and `@waves-counter/vue` at coordinated version `0.1.0`; local tarball links are reserved for development and test loops only.
 - [x] Keep the legacy SQLite `coffee` table intact for rollback and one-time baseline discovery.
 
 ## Backend integration
@@ -18,7 +18,7 @@ The source integration is implemented in `/Users/a2023362/workspace/fun/adrianla
 
 ## Frontend integration
 
-- [x] Import `@wave-counter/vue/styles.css` and replace only the local coffee behavior with `<WaveCounter counter-key="coffee" endpoint="/api/waves" />`.
+- [x] Import `@waves-counter/vue/styles.css` and replace only the local coffee behavior with `<WaveCounter counter-key="coffee" endpoint="/api/waves" />`.
 - [x] Preserve the surrounding compact site presentation through CSS custom properties.
 - [ ] Verify click, right click, long press, Context Menu, Shift+F10, Escape, retry, and reduced-motion behavior.
 

@@ -236,7 +236,7 @@ Browser tests exercise the complete Vue-to-FastAPI and Vue-to-Express paths in t
 
 ## Packaging and Releases
 
-All public packages use coordinated semantic versions for v1. Intended npm names are `@wave-counter/node`, `@wave-counter/client`, and `@wave-counter/vue`. The release setup first attempts to establish the `@wave-counter` npm scope; if that scope cannot be controlled, the packages use `@willylatorre/node`, `@willylatorre/client`, and `@willylatorre/vue`. The PyPI distribution is `wave-counter`, imported as `wave_counter`.
+All public packages use coordinated semantic versions for v1. Intended npm names are `@waves-counter/node`, `@waves-counter/client`, and `@waves-counter/vue`. The PyPI distribution is `wave-counter`, imported as `wave_counter`.
 
 GitHub Actions runs tests, builds Python wheels and Node prebuilds for supported platforms, and publishes from a version tag. Registry authentication uses trusted publishing and npm provenance where available. The Rust crate remains internal in v1.
 
@@ -248,7 +248,7 @@ GitHub Actions runs tests, builds Python wheels and Node prebuilds for supported
 2. Pass the site's persistent `DB_PATH` to Wave Counter.
 3. Configure `coffee` with the authoritative legacy total at migration time.
 4. Mount the FastAPI router at `/api/waves`.
-5. Replace the local Vue coffee behavior with `@wave-counter/vue` while preserving the site's surrounding presentation.
+5. Replace the local Vue coffee behavior with `@waves-counter/vue` while preserving the site's surrounding presentation.
 6. Verify total preservation, increment behavior, analytics, persistence, and deployment configuration.
 7. Remove the legacy coffee table, repository, models, routes, API methods, and tests only after the Wave Counter integration is green.
 

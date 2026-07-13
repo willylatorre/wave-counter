@@ -1,7 +1,7 @@
 import { effectScope, nextTick } from 'vue'
 import { expect, test, vi } from 'vitest'
 
-import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@wave-counter/client'
+import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@waves-counter/client'
 
 import { useWaveCounter } from '../src/index.js'
 

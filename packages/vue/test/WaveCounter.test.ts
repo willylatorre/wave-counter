@@ -5,7 +5,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@wave-counter/client'
+import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@waves-counter/client'
 
 import WaveCounter from '../src/WaveCounter.vue'
 

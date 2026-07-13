@@ -1,5 +1,5 @@
 {
-  "name": "@wave-counter/node",
+  "name": "@waves-counter/node",
   "version": "0.1.0",
   "description": "Native Node and Express integration for Wave Counter",
   "license": "MIT",

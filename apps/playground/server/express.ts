@@ -1,8 +1,8 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { WaveCounter } from '@wave-counter/node'
-import { createWaveRouter } from '@wave-counter/node/express'
+import { WaveCounter } from '@waves-counter/node'
+import { createWaveRouter } from '@waves-counter/node/express'
 import express from 'express'
 
 const port = Number(process.env.PORT ?? 18082)

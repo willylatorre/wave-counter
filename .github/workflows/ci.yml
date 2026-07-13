@@ -73,9 +73,9 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
-      - run: npm test --workspace @wave-counter/node
-      - run: npm test --workspace @wave-counter/client
-      - run: npm test --workspace @wave-counter/vue
+      - run: npm test --workspace @waves-counter/node
+      - run: npm test --workspace @waves-counter/client
+      - run: npm test --workspace @waves-counter/vue
       - run: npm run typecheck --workspaces --if-present
 
   browser:
@@ -93,7 +93,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm test --workspace @wave-counter/playground
+      - run: npm test --workspace @waves-counter/playground
 
   package-smoke:
     name: Package smoke on ${{ matrix.os }}
@@ -114,14 +114,14 @@ jobs:
           enable-cache: true
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
-      - run: npm run build --workspace @wave-counter/node
-      - run: npm run build --workspace @wave-counter/client
-      - run: npm run build --workspace @wave-counter/vue
+      - run: npm run build --workspace @waves-counter/node
+      - run: npm run build --workspace @waves-counter/client
+      - run: npm run build --workspace @waves-counter/vue
       - run: mkdir -p dist/npm dist/python
         shell: bash
-      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/node
-      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/client
-      - run: npm pack --pack-destination dist/npm --workspace @wave-counter/vue
+      - run: npm pack --pack-destination dist/npm --workspace @waves-counter/node
+      - run: npm pack --pack-destination dist/npm --workspace @waves-counter/client
+      - run: npm pack --pack-destination dist/npm --workspace @waves-counter/vue
       - run: uv run --project python/wave-counter --frozen maturin build --release --out dist/python
       - uses: actions/upload-artifact@v7
         with:
@@ -150,7 +150,7 @@ jobs:
           cd runtime-smoke
           npm init -y
           npm install ../artifacts/npm/*.tgz
-          node --input-type=module -e "import { WaveCounter } from '@wave-counter/node'; const counter = new WaveCounter({ databasePath: './smoke.sqlite3' }); const result = await counter.recordEvent('coffee', '0198f2f7-6d42-7d94-b1a6-e4305543f132'); if (result.counter.total !== 1) process.exit(1)"
+          node --input-type=module -e "import { WaveCounter } from '@waves-counter/node'; const counter = new WaveCounter({ databasePath: './smoke.sqlite3' }); const result = await counter.recordEvent('coffee', '0198f2f7-6d42-7d94-b1a6-e4305543f132'); if (result.counter.total !== 1) process.exit(1)"
         shell: bash
 
   runtime-smoke-python:

@@ -1,5 +1,5 @@
 {
-  "name": "@wave-counter/client",
+  "name": "@waves-counter/client",
   "version": "0.1.0",
   "description": "Framework-neutral browser client for Wave Counter",
   "license": "MIT",
