@@ -2,6 +2,7 @@
 target/
 node_modules/
 .venv/
+.env
 dist/
 *.sqlite3
 *.py[cod]
