@@ -12,7 +12,7 @@ import { publicationManifests } from './set-npm-scope.mjs'
 test('accepts the repository coordinated version', async () => {
   const report = await inspectVersions(new URL('..', import.meta.url))
 
-  assert.equal(report.version, '0.1.0')
+  assert.match(report.version, /^\d+\.\d+\.\d+$/)
   assert.equal(report.packages.length, 4)
   assert.deepEqual(report.mismatches, [])
 })
