@@ -1,8 +1,31 @@
 # Wave Counter
 
-Wave Counter is a self-hosted anonymous counter with atomic SQLite persistence, idempotent events, seven-day UTC analytics, FastAPI and Express routers, and an accessible Vue component.
+Self-hosted anonymous counters for websites and apps.
 
-The Rust engine is shared by every backend integration. Hosts keep ownership of authentication, CORS, rate limiting, deployment, and their SQLite file.
+Wave Counter gives you atomic SQLite persistence, idempotent events, seven-day UTC analytics, FastAPI and Express routers, a framework-neutral browser client, and an accessible Vue component. The storage engine is shared across Python and Node through Rust, while the host app keeps ownership of authentication, CORS, rate limiting, deployment, backups, and the SQLite file.
+
+## Packages
+
+| Package | Use it for |
+| --- | --- |
+| [`wave-counter`](python/wave-counter/README.md) | Python bindings and an optional FastAPI router. |
+| [`@waves-counter/node`](packages/node/README.md) | Native Node API and Express router. |
+| [`@waves-counter/client`](packages/client/README.md) | Framework-neutral browser client and optimistic state controller. |
+| [`@waves-counter/vue`](packages/vue/README.md) | Accessible Vue component and composable. |
+
+The public npm scope is [`@waves-counter`](https://www.npmjs.com/org/waves-counter).
+
+## HTTP contract
+
+Mount either backend router at a prefix you control, such as `/api/waves`. Both expose identical routes:
+
+```text
+GET  /counters/{key}
+POST /counters/{key}/events
+GET  /counters/{key}/analytics?window=7d
+```
+
+The event body is `{ "eventId": "<UUIDv7>" }`. A new event returns `201`; replaying the same ID returns `200` without incrementing again. Unknown counters read as virtual zero counters. Configured baseline counts are inserted once and never overwrite stored totals.
 
 ## FastAPI
 
@@ -32,16 +55,20 @@ app.include_router(
 )
 ```
 
-## Express
+## Node and Express
+
+Install the Node package and Express:
 
 ```bash
 npm install @waves-counter/node express
 ```
 
+Then mount the router inside your app:
+
 ```ts
+import express from 'express'
 import { WaveCounter } from '@waves-counter/node'
 import { createWaveRouter } from '@waves-counter/node/express'
-import express from 'express'
 
 const app = express()
 const counter = new WaveCounter({
@@ -59,6 +86,8 @@ app.use(
 ```
 
 All Node database methods run as asynchronous native tasks rather than on the event-loop thread.
+
+See [`@waves-counter/node`](packages/node/README.md) for the full Node API.
 
 ## Vue
 
@@ -100,17 +129,7 @@ await counter.toggleStats()
 
 CSS custom properties beginning with `--wave-counter-` control ink, muted text, surfaces, borders, accent, errors, radii, and motion timing. Slots named `icon` and `analytics`, plus the default button slot, provide structural customization.
 
-## HTTP contract
-
-Mount either router at a host-selected prefix. Both expose identical routes:
-
-```text
-GET  /counters/{key}
-POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
-```
-
-The event body is `{ "eventId": "<UUIDv7>" }`. A new event returns `201`; replaying the same ID returns `200` without incrementing again. Unknown counters read as virtual zero counters. Configured baseline counts are inserted once and never overwrite stored totals.
+See [`@waves-counter/vue`](packages/vue/README.md) and [`@waves-counter/client`](packages/client/README.md) for the full frontend APIs.
 
 ## Persistence and operations
 
