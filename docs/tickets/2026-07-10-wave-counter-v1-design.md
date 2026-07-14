@@ -69,8 +69,8 @@ Wave Counter stores its data in namespaced tables to avoid collisions with host 
 ```text
 waves_counters
 - key TEXT PRIMARY KEY
-- baseline_count INTEGER NOT NULL DEFAULT 0
-- event_count INTEGER NOT NULL DEFAULT 0
+- baseline_count INTEGER NOT NULL DEFAULT 0 CHECK (baseline_count >= 0)
+- event_count INTEGER NOT NULL DEFAULT 0 CHECK (event_count >= 0)
 - created_at INTEGER NOT NULL
 - updated_at INTEGER NOT NULL
 
@@ -84,7 +84,7 @@ waves_migrations
 - applied_at INTEGER NOT NULL
 ```
 
-An index on `(counter_key, occurred_at)` supports analytics queries. Timestamps are stored as UTC Unix integers and serialized as ISO 8601 UTC strings at public boundaries.
+An index on `(counter_key, occurred_at)` supports analytics queries. Timestamps are stored as UTC Unix integers and serialized as ISO 8601 UTC strings at public boundaries. Non-negative `CHECK` constraints on the count columns defend the invariant that a total can never go negative.
 
 Each event is inserted and its counter aggregate incremented in one transaction. The client creates the event ID before sending the request. Reusing an event ID returns the authoritative counter without incrementing twice, making retries safe after ambiguous network failures.
 
