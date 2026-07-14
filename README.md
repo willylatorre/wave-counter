@@ -2,7 +2,7 @@
 
 Self-hosted anonymous counters for websites and apps.
 
-Wave Counter gives you atomic SQLite persistence, idempotent events, seven-day UTC analytics, FastAPI and Express routers, a framework-neutral browser client, and an accessible Vue component. The storage engine is shared across Python and Node through Rust, while the host app keeps ownership of authentication, CORS, rate limiting, deployment, backups, and the SQLite file.
+Wave Counter gives you atomic SQLite persistence, idempotent events, seven-day UTC analytics, FastAPI and Express routers, a framework-neutral browser client, and accessible React and Vue components. The storage engine is shared across Python and Node through Rust, while the host app keeps ownership of authentication, CORS, rate limiting, deployment, backups, and the SQLite file.
 
 ## Packages
 
@@ -11,6 +11,7 @@ Wave Counter gives you atomic SQLite persistence, idempotent events, seven-day U
 | [`wave-counter`](python/wave-counter/README.md) | Python bindings and an optional FastAPI router. |
 | [`@waves-counter/node`](packages/node/README.md) | Native Node API and Express router. |
 | [`@waves-counter/client`](packages/client/README.md) | Framework-neutral browser client and optimistic state controller. |
+| [`@waves-counter/react`](packages/react/README.md) | Accessible React component and hook. |
 | [`@waves-counter/vue`](packages/vue/README.md) | Accessible Vue component and composable. |
 
 The public npm scope is [`@waves-counter`](https://www.npmjs.com/org/waves-counter).
@@ -89,6 +90,23 @@ All Node database methods run as asynchronous native tasks rather than on the ev
 
 See [`@waves-counter/node`](packages/node/README.md) for the full Node API.
 
+## React
+
+```bash
+npm install @waves-counter/react @waves-counter/client react react-dom
+```
+
+```tsx
+import { WaveCounter } from '@waves-counter/react'
+import '@waves-counter/react/styles.css'
+
+export function CoffeeCounter() {
+  return <WaveCounter counterKey="coffee" endpoint="/api/waves" onError={console.error} />
+}
+```
+
+`useWaveCounter` provides the same optimistic state and actions for a custom React presentation. See [`@waves-counter/react`](packages/react/README.md) for component props, render props, styling, and SSR guidance.
+
 ## Vue
 
 ```bash
@@ -129,7 +147,7 @@ await counter.toggleStats()
 
 CSS custom properties beginning with `--wave-counter-` control ink, muted text, surfaces, borders, accent, errors, radii, and motion timing. Slots named `icon` and `analytics`, plus the default button slot, provide structural customization.
 
-See [`@waves-counter/vue`](packages/vue/README.md) and [`@waves-counter/client`](packages/client/README.md) for the full frontend APIs.
+See [`@waves-counter/react`](packages/react/README.md), [`@waves-counter/vue`](packages/vue/README.md), and [`@waves-counter/client`](packages/client/README.md) for the full frontend APIs.
 
 ## Persistence and operations
 
@@ -150,6 +168,7 @@ npm install
 cargo test --workspace
 uv run --project python/wave-counter pytest
 npm test --workspace @waves-counter/client
+npm test --workspace @waves-counter/react
 npm test --workspace @waves-counter/vue
 npm test --workspace @waves-counter/node
 npm test --workspace @waves-counter/playground

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -14,6 +14,10 @@ test('accepts the repository coordinated version', async () => {
 
   assert.match(report.version, /^\d+\.\d+\.\d+$/)
   assert.equal(report.packages.length, 5)
+  assert.deepEqual(
+    report.packages.find((packageInfo) => packageInfo.name === '@waves-counter/react'),
+    { name: '@waves-counter/react', version: report.version },
+  )
   assert.deepEqual(report.mismatches, [])
 })
 
@@ -50,6 +54,17 @@ test('validates public package manifests and release workflows', async () => {
   const errors = await validatePackages(new URL('..', import.meta.url))
 
   assert.deepEqual(errors, [])
+})
+
+test('integrates the React package into consumer documentation and releases', async () => {
+  const root = new URL('..', import.meta.url)
+  const [rootReadme, release] = await Promise.all([
+    readFile(new URL('../README.md', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8'),
+  ])
+
+  assert.match(rootReadme, /@waves-counter\/react/)
+  assert.match(release, /packages\/react/)
 })
 
 test('prepares the canonical npm scope', () => {

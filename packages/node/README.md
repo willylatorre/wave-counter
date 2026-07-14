@@ -102,4 +102,5 @@ The Express router maps invalid counter keys, event IDs, and analytics windows t
 ## Frontend packages
 
 - [`@waves-counter/client`](https://www.npmjs.com/package/@waves-counter/client): framework-neutral browser client.
+- [`@waves-counter/react`](https://www.npmjs.com/package/@waves-counter/react): accessible React component and hook.
 - [`@waves-counter/vue`](https://www.npmjs.com/package/@waves-counter/vue): accessible Vue component and composable.
