@@ -11,6 +11,7 @@ export function publicationManifests(manifests, scope) {
   const next = structuredClone(manifests)
   next.node.name = `${scope}/node`
   next.client.name = `${scope}/client`
+  next.react.name = `${scope}/react`
   next.vue.name = `${scope}/vue`
   return next
 }
@@ -19,7 +20,10 @@ async function main() {
   const root = dirname(dirname(fileURLToPath(import.meta.url)))
   const scope = process.argv[2] || '@waves-counter'
   const paths = Object.fromEntries(
-    ['node', 'client', 'vue'].map((name) => [name, join(root, `packages/${name}/package.json`)]),
+    ['node', 'client', 'react', 'vue'].map((name) => [
+      name,
+      join(root, `packages/${name}/package.json`),
+    ]),
   )
   const manifests = Object.fromEntries(
     await Promise.all(

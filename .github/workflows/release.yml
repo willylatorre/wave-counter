@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: npm
-      url: https://www.npmjs.com/package/@waves-counter/vue
+      url: https://www.npmjs.com/package/@waves-counter/react
     permissions:
       contents: read
       id-token: write
@@ -107,8 +107,10 @@ jobs:
           merge-multiple: true
       - run: npm run build:ts --workspace @waves-counter/node
       - run: npm run build --workspace @waves-counter/client
+      - run: npm run build --workspace @waves-counter/react
       - run: npm run build --workspace @waves-counter/vue
       - run: node tooling/set-npm-scope.mjs
       - run: npm publish ./packages/client
       - run: npm publish ./packages/node
+      - run: npm publish ./packages/react
       - run: npm publish ./packages/vue

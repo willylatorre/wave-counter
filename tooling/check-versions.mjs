@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const PUBLIC_PACKAGES = [
   ['@waves-counter/node', 'packages/node/package.json', 'json'],
   ['@waves-counter/client', 'packages/client/package.json', 'json'],
+  ['@waves-counter/react', 'packages/react/package.json', 'json'],
   ['@waves-counter/vue', 'packages/vue/package.json', 'json'],
   ['wave-counter', 'python/wave-counter/pyproject.toml', 'toml'],
 ]
@@ -59,4 +60,3 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main()
-

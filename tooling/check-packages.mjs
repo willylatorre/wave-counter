@@ -10,7 +10,7 @@ export async function validatePackages(rootInput) {
   const root = rootInput instanceof URL ? fileURLToPath(rootInput) : rootInput
   const errors = []
   const manifests = await Promise.all(
-    ['node', 'client', 'vue'].map(async (name) => [
+    ['node', 'client', 'react', 'vue'].map(async (name) => [
       name,
       JSON.parse(await readFile(join(root, `packages/${name}/package.json`), 'utf8')),
     ]),
@@ -29,11 +29,17 @@ export async function validatePackages(rootInput) {
 
   const node = manifests.find(([name]) => name === 'node')?.[1]
   const client = manifests.find(([name]) => name === 'client')?.[1]
+  const react = manifests.find(([name]) => name === 'react')?.[1]
   const vue = manifests.find(([name]) => name === 'vue')?.[1]
   if (!node?.files?.includes('*.node')) errors.push('@waves-counter/node must ship native binaries')
   if (node?.engines?.node !== '>=20') errors.push('@waves-counter/node must support Node 20+')
   if (!node?.exports?.['./express']) errors.push('@waves-counter/node must export its Express router')
   if (!client?.exports?.['.']) errors.push('@waves-counter/client must export its browser client')
+  if (!react?.exports?.['./styles.css']) errors.push('@waves-counter/react must export default styles')
+  if (!react?.peerDependencies?.react?.startsWith('^19')) {
+    errors.push('@waves-counter/react must declare React 19 as a peer')
+  }
+  if (react?.dependencies?.react) errors.push('@waves-counter/react must not bundle React')
   if (!vue?.exports?.['./styles.css']) errors.push('@waves-counter/vue must export default styles')
   if (!vue?.peerDependencies?.vue?.startsWith('^3.5')) {
     errors.push('@waves-counter/vue must declare Vue 3.5 as a peer')
@@ -96,7 +102,7 @@ export async function validatePackages(rootInput) {
   }
   if (
     !release.includes('node tooling/set-npm-scope.mjs') ||
-    !['client', 'node', 'vue'].every((name) =>
+    !['client', 'node', 'react', 'vue'].every((name) =>
       release.includes(`npm publish ./packages/${name}`),
     )
   ) {

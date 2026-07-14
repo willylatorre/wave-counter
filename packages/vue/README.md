@@ -179,5 +179,6 @@ For theme-specific overrides, set the base variables for both modes or use the `
 ## Related packages
 
 - [`@waves-counter/client`](https://www.npmjs.com/package/@waves-counter/client): framework-neutral browser client and controller.
+- [`@waves-counter/react`](https://www.npmjs.com/package/@waves-counter/react): accessible React component and hook.
 - `@waves-counter/node`: native Node and Express backend integration.
 - `wave-counter`: Python bindings and FastAPI integration.
