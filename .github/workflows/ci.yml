@@ -75,6 +75,7 @@ jobs:
       - run: npm ci
       - run: npm test --workspace @waves-counter/node
       - run: npm test --workspace @waves-counter/client
+      - run: npm test --workspace @waves-counter/react
       - run: npm test --workspace @waves-counter/vue
       - run: npm run typecheck --workspaces --if-present
 
@@ -116,11 +117,13 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace @waves-counter/node
       - run: npm run build --workspace @waves-counter/client
+      - run: npm run build --workspace @waves-counter/react
       - run: npm run build --workspace @waves-counter/vue
       - run: mkdir -p dist/npm dist/python
         shell: bash
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/node
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/client
+      - run: npm pack --pack-destination dist/npm --workspace @waves-counter/react
       - run: npm pack --pack-destination dist/npm --workspace @waves-counter/vue
       - run: uv run --project python/wave-counter --frozen maturin build --release --manifest-path python/wave-counter/Cargo.toml --out dist/python
       - uses: actions/upload-artifact@v7

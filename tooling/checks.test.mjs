@@ -13,7 +13,7 @@ test('accepts the repository coordinated version', async () => {
   const report = await inspectVersions(new URL('..', import.meta.url))
 
   assert.match(report.version, /^\d+\.\d+\.\d+$/)
-  assert.equal(report.packages.length, 4)
+  assert.equal(report.packages.length, 5)
   assert.deepEqual(report.mismatches, [])
 })
 
@@ -57,6 +57,7 @@ test('prepares the canonical npm scope', () => {
     {
       node: { name: '@waves-counter/node' },
       client: { name: '@waves-counter/client' },
+      react: { name: '@waves-counter/react' },
       vue: {
         name: '@waves-counter/vue',
         version: '0.1.0',
@@ -68,6 +69,7 @@ test('prepares the canonical npm scope', () => {
 
   assert.equal(manifests.node.name, '@waves-counter/node')
   assert.equal(manifests.client.name, '@waves-counter/client')
+  assert.equal(manifests.react.name, '@waves-counter/react')
   assert.equal(manifests.vue.name, '@waves-counter/vue')
   assert.equal(manifests.vue.dependencies['@waves-counter/client'], '0.1.0')
 })
