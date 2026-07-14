@@ -170,7 +170,7 @@
 - Produces: installable npm packages, Python wheels, CI coverage, tagged trusted releases, and smoke-tested native artifacts.
 
 - [ ] **Step 1: Add failing manifest/conformance checks** that reject version drift, missing artifacts, unsupported runtimes, and divergent fixture results.
-- [ ] **Step 2: Implement CI matrices** for Rust, Python 3.10–3.14, Node 20/22/24, Linux/macOS/Windows native builds, unit/contract/browser tests, and package smoke installs without local Rust.
+- [ ] **Step 2: Implement CI matrices** for Rust, current Python and Node runtimes, Linux/macOS/Windows native builds, unit/contract/browser tests, and package smoke installs without local Rust.
 - [ ] **Step 3: Implement tag-driven release jobs** using PyPI trusted publishing and npm provenance, with package names controlled from root workspace metadata.
 - [ ] **Step 4: Document minimal FastAPI, Express, and Vue installation and usage** plus host-owned auth/CORS/rate-limit responsibilities.
 - [ ] **Step 5: Run all local checks and validate workflow syntax** with clean output.
