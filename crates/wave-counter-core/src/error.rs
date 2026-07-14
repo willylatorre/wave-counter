@@ -40,6 +40,8 @@ pub enum WaveCounterError {
     Configuration(String),
     #[error("storage operation failed")]
     Storage(#[source] SqliteError),
+    #[error("stored data could not be interpreted")]
+    CorruptData(String),
 }
 
 impl WaveCounterError {
@@ -51,8 +53,16 @@ impl WaveCounterError {
             Self::InvalidAnalyticsWindow => ErrorCode::InvalidAnalyticsWindow,
             Self::Busy => ErrorCode::Busy,
             Self::Configuration(_) => ErrorCode::Configuration,
-            Self::Storage(_) => ErrorCode::Storage,
+            Self::Storage(_) | Self::CorruptData(_) => ErrorCode::Storage,
         }
+    }
+
+    /// Encodes the error as the `code|message` string shared across the native
+    /// bindings. Keeping the wire format here means Python and Node decode a
+    /// single, canonical representation.
+    #[must_use]
+    pub fn wire(&self) -> String {
+        format!("{}|{self}", self.code().as_str())
     }
 }
 

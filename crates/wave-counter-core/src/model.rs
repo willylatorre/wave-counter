@@ -18,8 +18,9 @@ pub struct RecordEventResult {
     pub created: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnalyticsWindow {
+    #[serde(rename = "7d")]
     SevenDays,
 }
 
@@ -42,6 +43,22 @@ impl std::str::FromStr for AnalyticsWindow {
     }
 }
 
+/// Bucketing granularity of an analytics response. V1 always reports daily
+/// buckets; the enum keeps the wire value typed so future intervals cannot be
+/// introduced as bare strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AnalyticsInterval {
+    #[serde(rename = "day")]
+    Day,
+}
+
+/// Timezone the analytics buckets are computed in. V1 always uses UTC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AnalyticsTimezone {
+    #[serde(rename = "UTC")]
+    Utc,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsPoint {
@@ -53,9 +70,9 @@ pub struct AnalyticsPoint {
 #[serde(rename_all = "camelCase")]
 pub struct Analytics {
     pub key: String,
-    pub window: String,
-    pub interval: String,
-    pub timezone: String,
+    pub window: AnalyticsWindow,
+    pub interval: AnalyticsInterval,
+    pub timezone: AnalyticsTimezone,
     pub total: u64,
     pub previous_total: u64,
     pub change_percentage: Option<f64>,

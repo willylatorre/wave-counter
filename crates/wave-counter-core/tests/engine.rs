@@ -141,6 +141,14 @@ fn returns_seven_utc_buckets_and_previous_period_comparison() {
     );
     assert_eq!(analytics.points[0].count, 2);
     assert_eq!(analytics.points[6].count, 1);
+
+    // The typed window/interval/timezone must still serialize to the exact wire
+    // strings the Python and Node layers assert on.
+    let json: serde_json::Value =
+        serde_json::from_str(&serde_json::to_string(&analytics).unwrap()).unwrap();
+    assert_eq!(json["window"], "7d");
+    assert_eq!(json["interval"], "day");
+    assert_eq!(json["timezone"], "UTC");
 }
 
 #[test]
@@ -163,6 +171,30 @@ fn uses_namespaced_tables_foreign_keys_and_wal() {
     assert!(table_names.contains(&"waves_events".to_owned()));
     assert!(table_names.contains(&"waves_migrations".to_owned()));
     assert!(table_names.iter().all(|name| name.starts_with("waves_")));
+}
+
+#[test]
+fn reports_a_corrupt_timestamp_as_a_storage_error() {
+    let directory = tempdir().expect("temporary directory");
+    let path = directory.path().join("waves.sqlite3");
+    let counter = WaveCounter::open(Config::new(&path)).expect("counter opens");
+    counter
+        .record_event("coffee", &event_id(1_783_691_000_000))
+        .expect("event records");
+
+    // Force an out-of-range updated_at that chrono cannot represent.
+    let connection = Connection::open(&path).unwrap();
+    connection
+        .execute(
+            "UPDATE waves_counters SET updated_at = ?1 WHERE key = 'coffee'",
+            [i64::MAX],
+        )
+        .unwrap();
+
+    let error = counter
+        .get_counter("coffee")
+        .expect_err("corrupt timestamp is rejected");
+    assert_eq!(error.code(), ErrorCode::Storage);
 }
 
 #[test]

@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
 use napi::{
     Env, Status,
@@ -14,34 +9,7 @@ use wave_counter_core::{AnalyticsWindow, Config, WaveCounter, WaveCounterError};
 
 #[napi]
 pub struct NativeWaveCounter {
-    engine: LazyEngine,
-}
-
-#[derive(Clone)]
-struct LazyEngine {
-    config: Arc<Config>,
-    initialized: Arc<Mutex<Option<Arc<WaveCounter>>>>,
-}
-
-impl LazyEngine {
-    fn new(config: Config) -> Self {
-        Self {
-            config: Arc::new(config),
-            initialized: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    fn get(&self) -> napi::Result<Arc<WaveCounter>> {
-        let mut initialized = self.initialized.lock().map_err(|_| {
-            napi::Error::new(Status::GenericFailure, "storage|initialization lock failed")
-        })?;
-        if let Some(engine) = initialized.as_ref() {
-            return Ok(Arc::clone(engine));
-        }
-        let engine = Arc::new(WaveCounter::open((*self.config).clone()).map_err(domain_error)?);
-        *initialized = Some(Arc::clone(&engine));
-        Ok(engine)
-    }
+    engine: Arc<WaveCounter>,
 }
 
 #[napi]
@@ -63,15 +31,17 @@ impl NativeWaveCounter {
                 .map_err(|error| napi::Error::new(Status::InvalidArg, error.to_string()))?;
             config = config.with_initial_counts(initial_counts);
         }
-        Ok(Self {
-            engine: LazyEngine::new(config),
-        })
+        // Open eagerly so configuration, WAL, and baseline failures surface at
+        // construction, matching the Python binding and the spec's
+        // "initialization fails with a configuration error" contract.
+        let engine = Arc::new(WaveCounter::open(config).map_err(domain_error)?);
+        Ok(Self { engine })
     }
 
     #[napi(js_name = "getCounter")]
     pub fn get_counter(&self, key: String) -> AsyncTask<GetCounterTask> {
         AsyncTask::new(GetCounterTask {
-            engine: self.engine.clone(),
+            engine: Arc::clone(&self.engine),
             key,
         })
     }
@@ -79,7 +49,7 @@ impl NativeWaveCounter {
     #[napi(js_name = "recordEvent")]
     pub fn record_event(&self, key: String, event_id: String) -> AsyncTask<RecordEventTask> {
         AsyncTask::new(RecordEventTask {
-            engine: self.engine.clone(),
+            engine: Arc::clone(&self.engine),
             key,
             event_id,
         })
@@ -88,7 +58,7 @@ impl NativeWaveCounter {
     #[napi]
     pub fn analytics(&self, key: String, window: String) -> AsyncTask<AnalyticsTask> {
         AsyncTask::new(AnalyticsTask {
-            engine: self.engine.clone(),
+            engine: Arc::clone(&self.engine),
             key,
             window,
         })
@@ -96,7 +66,7 @@ impl NativeWaveCounter {
 }
 
 pub struct GetCounterTask {
-    engine: LazyEngine,
+    engine: Arc<WaveCounter>,
     key: String,
 }
 
@@ -105,11 +75,7 @@ impl Task for GetCounterTask {
     type JsValue = String;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        let snapshot = self
-            .engine
-            .get()?
-            .get_counter(&self.key)
-            .map_err(domain_error)?;
+        let snapshot = self.engine.get_counter(&self.key).map_err(domain_error)?;
         serde_json::to_string(&snapshot).map_err(serialization_error)
     }
 
@@ -119,7 +85,7 @@ impl Task for GetCounterTask {
 }
 
 pub struct RecordEventTask {
-    engine: LazyEngine,
+    engine: Arc<WaveCounter>,
     key: String,
     event_id: String,
 }
@@ -131,7 +97,6 @@ impl Task for RecordEventTask {
     fn compute(&mut self) -> napi::Result<Self::Output> {
         let result = self
             .engine
-            .get()?
             .record_event(&self.key, &self.event_id)
             .map_err(domain_error)?;
         serde_json::to_string(&result).map_err(serialization_error)
@@ -143,7 +108,7 @@ impl Task for RecordEventTask {
 }
 
 pub struct AnalyticsTask {
-    engine: LazyEngine,
+    engine: Arc<WaveCounter>,
     key: String,
     window: String,
 }
@@ -159,7 +124,6 @@ impl Task for AnalyticsTask {
             .map_err(domain_error)?;
         let analytics = self
             .engine
-            .get()?
             .analytics(&self.key, window, chrono::Utc::now())
             .map_err(domain_error)?;
         serde_json::to_string(&analytics).map_err(serialization_error)
@@ -171,10 +135,7 @@ impl Task for AnalyticsTask {
 }
 
 fn domain_error(error: WaveCounterError) -> napi::Error {
-    napi::Error::new(
-        Status::GenericFailure,
-        format!("{}|{error}", error.code().as_str()),
-    )
+    napi::Error::new(Status::GenericFailure, error.wire())
 }
 
 fn serialization_error(error: serde_json::Error) -> napi::Error {

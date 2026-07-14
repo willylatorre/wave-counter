@@ -21,14 +21,15 @@ afterEach(async () => {
 })
 
 describe('WaveCounter', () => {
-  test('defers database initialization to the first asynchronous task', async () => {
+  test('initializes the database eagerly at construction', async () => {
     const path = await databasePath()
 
     const counter = new WaveCounter({ databasePath: path })
 
-    expect(existsSync(path)).toBe(false)
-    await counter.getCounter('coffee')
+    // Configuration, WAL, and baseline failures surface here, matching the
+    // Python binding and the spec's "initialization fails" contract.
     expect(existsSync(path)).toBe(true)
+    await expect(counter.getCounter('coffee')).resolves.toMatchObject({ key: 'coffee' })
   })
 
   test('reads, records, and replays through asynchronous native tasks', async () => {
