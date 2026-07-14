@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "description": "Canonical shape of the wire DTOs the Wave Counter engine serializes (camelCase, as emitted by the Rust core's serde model). Each language hand-declares these same shapes; check-dtos.mjs parses every declaration and asserts the field sets match this source of truth, so adding or renaming a field in one language fails the build until all four agree.",
+  "types": {
+    "CounterSnapshot": {
+      "rust": "CounterSnapshot",
+      "fields": ["key", "total", "updatedAt"]
+    },
+    "RecordEventResult": {
+      "rust": "RecordEventResult",
+      "languages": ["rust", "python", "node"],
+      "fields": ["counter", "created"]
+    },
+    "AnalyticsPoint": {
+      "rust": "AnalyticsPoint",
+      "fields": ["start", "count"]
+    },
+    "Analytics": {
+      "rust": "Analytics",
+      "fields": [
+        "key",
+        "window",
+        "interval",
+        "timezone",
+        "total",
+        "previousTotal",
+        "changePercentage",
+        "points"
+      ]
+    }
+  },
+  "declarations": {
+    "rust": {
+      "path": "crates/wave-counter-core/src/model.rs",
+      "note": "snake_case struct fields; serde(rename_all = camelCase) maps them to the wire names above."
+    },
+    "python": {
+      "path": "python/wave-counter/wave_counter/__init__.py",
+      "note": "TypedDict classes with camelCase keys."
+    },
+    "node": {
+      "path": "packages/node/src/index.ts",
+      "note": "exported interfaces with camelCase members."
+    },
+    "client": {
+      "path": "packages/client/src/types.ts",
+      "note": "exported interfaces with camelCase members."
+    }
+  }
+}

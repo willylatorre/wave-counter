@@ -87,41 +87,68 @@ def read_window(request: Request) -> str:
     return values[0] if len(values) == 1 else "7d"
 
 
+# Declarative HTTP error contract for the FastAPI router. This table is the
+# Python projection of contracts/error-responses.json — the single source of
+# truth shared with the Express router. test_error_contract.py asserts the two
+# stay identical, so a status/message change here fails until the canonical
+# fixture (and therefore every other language) is updated to match.
+
+# Codes whose response reuses the originating WaveCounterError message verbatim.
+DOMAIN_MESSAGE_CODES: frozenset[str] = frozenset(
+    {"invalid_counter_key", "invalid_event_id", "invalid_analytics_window"}
+)
+
+# Per-code responses. Domain-message codes carry status only; their body is built
+# from the error. Others carry a static status/headers/body envelope.
+ERROR_RESPONSES: dict[str, dict[str, object]] = {
+    "invalid_counter_key": {"status": 400},
+    "invalid_event_id": {"status": 400},
+    "invalid_analytics_window": {"status": 400},
+    "busy": {
+        "status": 503,
+        "headers": {"Retry-After": "1"},
+        "body": {"code": "busy", "message": "counter storage is temporarily busy"},
+    },
+}
+
+FORBIDDEN: dict[str, object] = {
+    "status": 403,
+    "body": {"code": "forbidden", "message": "counter access denied"},
+}
+
+FALLBACK: dict[str, object] = {
+    "status": 500,
+    "body": {"code": "internal", "message": "internal counter error"},
+}
+
+
+def _envelope(
+    status: int, body: dict[str, str], headers: dict[str, str] | None = None
+) -> JSONResponse:
+    return JSONResponse(status_code=status, headers=headers, content={"error": body})
+
+
 def forbidden() -> JSONResponse:
-    return JSONResponse(
-        status_code=403,
-        content={"error": {"code": "forbidden", "message": "counter access denied"}},
-    )
+    return _envelope(cast(int, FORBIDDEN["status"]), cast(dict[str, str], FORBIDDEN["body"]))
 
 
 def error_response(error: Exception) -> JSONResponse:
     if not isinstance(error, WaveCounterError):
         return internal_error()
-    if error.code in {
-        "invalid_counter_key",
-        "invalid_event_id",
-        "invalid_analytics_window",
-    }:
-        return JSONResponse(
-            status_code=400,
-            content={"error": {"code": error.code, "message": error.message}},
-        )
-    if error.code == "busy":
-        return JSONResponse(
-            status_code=503,
-            headers={"Retry-After": "1"},
-            content={
-                "error": {
-                    "code": "busy",
-                    "message": "counter storage is temporarily busy",
-                }
-            },
-        )
-    return internal_error()
+    spec = ERROR_RESPONSES.get(error.code)
+    if spec is None:
+        return internal_error()
+    body = (
+        {"code": error.code, "message": error.message}
+        if error.code in DOMAIN_MESSAGE_CODES
+        else cast(dict[str, str], spec["body"])
+    )
+    return _envelope(
+        cast(int, spec["status"]),
+        body,
+        cast("dict[str, str] | None", spec.get("headers")),
+    )
 
 
 def internal_error() -> JSONResponse:
-    return JSONResponse(
-        status_code=500,
-        content={"error": {"code": "internal", "message": "internal counter error"}},
-    )
+    return _envelope(cast(int, FALLBACK["status"]), cast(dict[str, str], FALLBACK["body"]))

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { Analytics } from '@waves-counter/client'
+import { analyticsChartPoints, type Analytics } from '@waves-counter/client'
 
 const props = withDefaults(
   defineProps<{
@@ -11,18 +11,7 @@ const props = withDefaults(
   { animate: true },
 )
 
-const width = 240
-const height = 88
-const inset = 8
-const maximum = computed(() => Math.max(1, ...props.analytics.points.map((point) => point.count)))
-const coordinates = computed(() =>
-  props.analytics.points.map((point, index, points) => {
-    const availableWidth = width - inset * 2
-    const x = inset + (index / Math.max(1, points.length - 1)) * availableWidth
-    const y = height - inset - (point.count / maximum.value) * (height - inset * 2)
-    return { x, y, count: point.count }
-  }),
-)
+const coordinates = computed(() => analyticsChartPoints(props.analytics))
 const polyline = computed(() => coordinates.value.map(({ x, y }) => `${x},${y}`).join(' '))
 </script>
 

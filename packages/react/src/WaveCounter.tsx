@@ -6,7 +6,15 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
-import type { Analytics, AnalyticsWindow, WaveCounterTransport } from '@waves-counter/client'
+import {
+  capitalize,
+  comparisonText,
+  rangeText,
+  summaryText,
+  type Analytics,
+  type AnalyticsWindow,
+  type WaveCounterTransport,
+} from '@waves-counter/client'
 
 import { AnalyticsChart } from './AnalyticsChart.js'
 import { CoffeeIcon } from './CoffeeIcon.js'
@@ -401,54 +409,8 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1)
-}
-
 function describeTrigger(counterKey: string, total: number | undefined, statsEnabled: boolean): string {
   const totalDescription = total === undefined ? 'unavailable' : `${total} total`
   const statsDescription = statsEnabled ? ' Right click, long press, or use the context menu key for statistics.' : ''
   return `Add one ${counterKey}. ${totalDescription}.${statsDescription}`
-}
-
-function comparisonText(analytics: Analytics | null, window: AnalyticsWindow): string {
-  if (!analytics) return ''
-  if (window === 'all') {
-    return analytics.total === 0 ? 'No all-time events' : `${analytics.total} all-time events`
-  }
-  const previousPeriod = window === '1M' ? 'previous 30 days' : 'previous seven days'
-  if (analytics.previousTotal === 0) {
-    return analytics.total === 0
-      ? `No events in this or the ${previousPeriod}`
-      : `${analytics.total} events, with none in the ${previousPeriod}`
-  }
-  const change = analytics.changePercentage ?? 0
-  return `${Math.abs(change)}% ${change >= 0 ? 'more' : 'less'} than the ${previousPeriod}`
-}
-
-function rangeText(analytics: Analytics | null, window: AnalyticsWindow): string {
-  if (!analytics?.points.length) return defaultRangeText(window)
-  const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
-  const first = analytics.points[0]
-  const last = analytics.points.at(-1)
-  return first && last
-    ? `${formatter.format(new Date(first.start))} to ${formatter.format(new Date(last.start))}, UTC`
-    : defaultRangeText(window)
-}
-
-function summaryText(analytics: Analytics | null, window: AnalyticsWindow): string {
-  if (!analytics) return ''
-  return `${analytics.total} events in ${windowSummary(window)}. Daily counts: ${analytics.points.map((point) => point.count).join(', ')}. ${comparisonText(analytics, window)}.`
-}
-
-function defaultRangeText(window: AnalyticsWindow): string {
-  if (window === '1M') return 'Last 30 UTC days'
-  if (window === 'all') return 'All-time UTC activity'
-  return 'Last seven UTC days'
-}
-
-function windowSummary(window: AnalyticsWindow): string {
-  if (window === '1M') return 'the last 30 days'
-  if (window === 'all') return 'all time'
-  return 'the last seven days'
 }

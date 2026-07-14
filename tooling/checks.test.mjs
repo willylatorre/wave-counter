@@ -8,6 +8,7 @@ import { parseDocument } from 'yaml'
 import { inspectVersions } from './check-versions.mjs'
 import { validateConformance } from './check-conformance.mjs'
 import { validatePackages } from './check-packages.mjs'
+import { inspectDtos, rustFields, pythonFields, tsFields } from './check-dtos.mjs'
 import { publicationManifests } from './set-npm-scope.mjs'
 
 test('accepts the repository coordinated version', async () => {
@@ -116,4 +117,33 @@ test('prepares the canonical npm scope', () => {
   assert.equal(manifests.react.name, '@waves-counter/react')
   assert.equal(manifests.vue.name, '@waves-counter/vue')
   assert.equal(manifests.vue.dependencies['@waves-counter/client'], '0.1.0')
+})
+
+test('confirms the DTO shapes agree across all four languages', async () => {
+  const report = await inspectDtos(new URL('..', import.meta.url))
+
+  assert.deepEqual(report.errors, [])
+  assert.ok(report.types.includes('Analytics'))
+})
+
+test('parses camelCase, snake_case, and TypedDict field declarations', () => {
+  assert.deepEqual(
+    rustFields('pub struct CounterSnapshot {\n  pub key: String,\n  pub updated_at: Option<i64>,\n}', 'CounterSnapshot'),
+    ['key', 'updatedAt'],
+  )
+  assert.deepEqual(
+    tsFields('export interface Foo {\n  key: string\n  previousTotal?: number\n}', 'Foo'),
+    ['key', 'previousTotal'],
+  )
+  assert.deepEqual(
+    pythonFields('class Foo(TypedDict):\n    key: str\n    previousTotal: int\n', 'Foo'),
+    ['key', 'previousTotal'],
+  )
+})
+
+test('detects a DTO field that drifts from the schema', async () => {
+  // A field present in the schema but absent from a declaration is reported.
+  const fields = tsFields('export interface Analytics {\n  key: string\n}', 'Analytics')
+
+  assert.deepEqual(fields, ['key'])
 })

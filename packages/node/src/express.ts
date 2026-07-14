@@ -6,6 +6,7 @@ import express, {
 } from 'express'
 
 import { WaveCounterError, type WaveCounterEngine } from './index.js'
+import { resolveErrorResponse, resolveForbidden } from './errorContract.js'
 
 export type Authorize = (request: Request) => boolean | Promise<boolean>
 
@@ -82,27 +83,22 @@ async function allowed(request: Request, authorize?: Authorize): Promise<boolean
 }
 
 function forbidden(response: Response): Response {
-  return response.status(403).json({
-    error: { code: 'forbidden', message: 'counter access denied' },
-  })
+  const { status, headers, body } = resolveForbidden()
+  return send(response, status, headers, body)
 }
 
 function errorResponse(response: Response, error: unknown): Response {
-  if (error instanceof WaveCounterError) {
-    if (
-      ['invalid_counter_key', 'invalid_event_id', 'invalid_analytics_window'].includes(error.code)
-    ) {
-      return response.status(400).json({
-        error: { code: error.code, message: error.message },
-      })
-    }
-    if (error.code === 'busy') {
-      return response.status(503).set('Retry-After', '1').json({
-        error: { code: 'busy', message: 'counter storage is temporarily busy' },
-      })
-    }
-  }
-  return response.status(500).json({
-    error: { code: 'internal', message: 'internal counter error' },
-  })
+  const code = error instanceof WaveCounterError ? error.code : 'internal'
+  const message = error instanceof WaveCounterError ? error.message : ''
+  const { status, headers, body } = resolveErrorResponse(code, message)
+  return send(response, status, headers, body)
+}
+
+function send(
+  response: Response,
+  status: number,
+  headers: Record<string, string>,
+  body: { code: string; message: string },
+): Response {
+  return response.status(status).set(headers).json({ error: body })
 }

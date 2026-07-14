@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "description": "Canonical HTTP error contract shared by every Wave Counter router. Each router mirrors this table declaratively and asserts equality against it in its own test suite, so a mapping change in one language cannot silently diverge from the others. Domain-message codes reuse the engine's own error message; all other responses use the static envelope defined here.",
+  "domainMessageCodes": ["invalid_counter_key", "invalid_event_id", "invalid_analytics_window"],
+  "responses": {
+    "invalid_counter_key": { "status": 400 },
+    "invalid_event_id": { "status": 400 },
+    "invalid_analytics_window": { "status": 400 },
+    "busy": {
+      "status": 503,
+      "headers": { "Retry-After": "1" },
+      "body": { "code": "busy", "message": "counter storage is temporarily busy" }
+    }
+  },
+  "forbidden": {
+    "status": 403,
+    "body": { "code": "forbidden", "message": "counter access denied" }
+  },
+  "fallback": {
+    "status": 500,
+    "body": { "code": "internal", "message": "internal counter error" }
+  }
+}

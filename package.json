@@ -1,6 +1,6 @@
 {
   "name": "wave-counter-monorepo",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.8.0",
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "check": "node tooling/check-versions.mjs && node tooling/check-conformance.mjs && node tooling/check-packages.mjs",
+    "check": "node tooling/check-versions.mjs && node tooling/check-conformance.mjs && node tooling/check-dtos.mjs && node tooling/check-packages.mjs",
     "test:tooling": "node --test tooling/checks.test.mjs",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"

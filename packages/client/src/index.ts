@@ -13,3 +13,14 @@ export type {
   CounterSnapshot,
   WaveCounterTransport,
 } from './types.js'
+export {
+  ANALYTICS_CHART_GEOMETRY,
+  analyticsChartPoints,
+  capitalize,
+  comparisonText,
+  defaultRangeText,
+  rangeText,
+  summaryText,
+  windowSummary,
+} from './analytics.js'
+export type { AnalyticsChartGeometry, AnalyticsChartPoint } from './analytics.js'

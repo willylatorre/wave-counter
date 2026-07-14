@@ -39,13 +39,16 @@ host app owns auth, CORS, rate limiting, deployment, backups, and the SQLite fil
 - **Do not reimplement domain logic in a binding or the frontend.** Validation,
   idempotency, and analytics math live in `crates/wave-counter-core`. Bindings
   pass through. (CONTEXT.md, invariant #1.)
-- **The HTTP error→status mapping is duplicated** in the FastAPI and Express
-  routers and must stay in lockstep. Edit both together. (CONTEXT.md, invariant
-  #3.)
-- **Accessible analytics text must match across React and Vue.** (CONTEXT.md,
+- **The HTTP error→status mapping is single-sourced** in
+  `contracts/error-responses.json`; both routers mirror it and are drift-tested.
+  Change a status/message → update the fixture, then both router tables. (CONTEXT.md,
+  invariant #3.)
+- **Accessible analytics text + chart math live once** in
+  `packages/client/src/analytics.ts`; React and Vue import them. (CONTEXT.md,
   invariant #7.)
-- New public API changes usually touch four type mirrors — see CONTEXT.md
-  invariant #5.
+- **DTO field changes touch four mirrors** guarded by `contracts/dto-schema.json`
+  + `tooling/check-dtos.mjs` (run in `npm run check`). Update the schema and all
+  four declarations together. (CONTEXT.md, invariant #5.)
 
 ## Build & test
 
