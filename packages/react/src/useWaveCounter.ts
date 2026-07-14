@@ -39,9 +39,11 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
   }, [controller, options.showStats])
   const subscribe = useCallback((listener: () => void) => controller.subscribe(listener), [controller])
   const getSnapshot = useCallback(() => controller.snapshot, [controller])
+  const getServerSnapshot = useCallback(() => controller.snapshot, [controller])
   const state = useSyncExternalStore(
     subscribe,
     getSnapshot,
+    getServerSnapshot,
   )
 
   return {

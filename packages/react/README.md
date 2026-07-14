@@ -144,7 +144,7 @@ For dark-mode-specific overrides, use the `*-dark` fallbacks such as `--wave-cou
 - Keep API authorization, CORS, abuse prevention, and rate limiting in your host app.
 - The package does not collect user identity or browser fingerprints.
 - Counter increments are idempotent at the transport layer, so transient network retries should not double-count.
-- For SSR, render the component normally but call `load`, `increment`, and analytics actions only in browser effects or event handlers.
+- SSR renders the controller's initial snapshot without starting a network request. Render the component normally, then call `load`, `increment`, and analytics actions only from browser effects or event handlers.
 
 ## Related packages
 

@@ -58,13 +58,16 @@ test('validates public package manifests and release workflows', async () => {
 
 test('integrates the React package into consumer documentation and releases', async () => {
   const root = new URL('..', import.meta.url)
-  const [rootReadme, release] = await Promise.all([
+  const [rootReadme, ci, release] = await Promise.all([
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8'),
   ])
 
   assert.match(rootReadme, /@waves-counter\/react/)
-  assert.match(release, /packages\/react/)
+  assert.match(ci, /npm test --workspace @waves-counter\/react/)
+  assert.match(release, /npm run build --workspace @waves-counter\/react/)
+  assert.match(release, /npm publish \.\/packages\/react/)
 })
 
 test('prepares the canonical npm scope', () => {

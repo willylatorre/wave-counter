@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@waves-counter/client'
@@ -33,6 +34,17 @@ function renderCounter(counterTransport = transport(), props = {}) {
 afterEach(() => {
   document.body.innerHTML = ''
   vi.useRealTimers()
+})
+
+test('renders on the server without starting network effects', () => {
+  const counterTransport = transport()
+
+  expect(() => renderToString(
+    <WaveCounter counterKey="coffee" endpoint="/api/waves" transport={counterTransport} />,
+  )).not.toThrow()
+  expect(counterTransport.getCounter).not.toHaveBeenCalled()
+  expect(counterTransport.increment).not.toHaveBeenCalled()
+  expect(counterTransport.getAnalytics).not.toHaveBeenCalled()
 })
 
 test('loads and reconciles an optimistic increment', async () => {
