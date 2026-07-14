@@ -80,6 +80,17 @@ def test_domain_validation_errors_are_400(tmp_path: Path) -> None:
     }
 
 
+def test_repeated_window_param_falls_back_to_default(tmp_path: Path) -> None:
+    client = client_for(WaveCounter(database_path=tmp_path / "waves.sqlite3"))
+
+    # A repeated window param is ambiguous, so it defaults to 7d rather than
+    # rejecting, matching the Express adapter's array-to-default behavior.
+    response = client.get("/api/waves/counters/coffee/analytics?window=7d&window=30d")
+
+    assert response.status_code == 200
+    assert response.json()["window"] == "7d"
+
+
 def test_authorization_callback_composes_with_the_router(tmp_path: Path) -> None:
     counter = WaveCounter(database_path=tmp_path / "waves.sqlite3")
     client = client_for(counter, authorize=lambda request: request.headers.get("x-key") == "yes")

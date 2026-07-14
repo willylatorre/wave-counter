@@ -6,7 +6,6 @@ from typing import Protocol, TypeAlias, cast
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
 
 from . import Analytics, CounterSnapshot, RecordEventResult, WaveCounterError
 
@@ -22,12 +21,6 @@ class Counter(Protocol):
 Authorize: TypeAlias = Callable[[Request], bool | Awaitable[bool]]
 
 
-class EventBody(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    event_id: str = Field(alias="eventId")
-
-
 def create_router(counter: Counter, authorize: Authorize | None = None) -> APIRouter:
     router = APIRouter()
 
@@ -39,52 +32,59 @@ def create_router(counter: Counter, authorize: Authorize | None = None) -> APIRo
             return await result
         return result
 
-    @router.get("/counters/{key}", response_model=None)
-    async def get_counter(request: Request, key: str) -> CounterSnapshot | JSONResponse:
+    async def guarded(request: Request, action: Callable[[], Awaitable[object]]) -> object:
         if not await allowed(request):
             return forbidden()
         try:
-            return counter.get_counter(key)
+            return await action()
         except Exception as error:  # FastAPI boundary sanitizes unexpected failures.
             return error_response(error)
 
+    @router.get("/counters/{key}", response_model=None)
+    async def get_counter(request: Request, key: str) -> object:
+        async def action() -> CounterSnapshot:
+            return counter.get_counter(key)
+
+        return await guarded(request, action)
+
     @router.post("/counters/{key}/events", response_model=None)
-    async def record_event(request: Request, key: str) -> CounterSnapshot | JSONResponse:
-        if not await allowed(request):
-            return forbidden()
-        try:
-            body = EventBody.model_validate(await request.json())
-        except Exception:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": {
-                        "code": "invalid_event_id",
-                        "message": "event ID must be a UUIDv7",
-                    }
-                },
-            )
-        try:
-            result = counter.record_event(key, body.event_id)
+    async def record_event(request: Request, key: str) -> object:
+        async def action() -> JSONResponse:
+            result = counter.record_event(key, await read_event_id(request))
             return JSONResponse(
                 status_code=201 if result["created"] else 200,
                 content=cast(dict[str, object], result["counter"]),
             )
-        except Exception as error:  # FastAPI boundary sanitizes unexpected failures.
-            return error_response(error)
+
+        return await guarded(request, action)
 
     @router.get("/counters/{key}/analytics", response_model=None)
-    async def analytics(
-        request: Request, key: str, window: str = "7d"
-    ) -> Analytics | JSONResponse:
-        if not await allowed(request):
-            return forbidden()
-        try:
-            return counter.analytics(key, window)
-        except Exception as error:  # FastAPI boundary sanitizes unexpected failures.
-            return error_response(error)
+    async def analytics(request: Request, key: str) -> object:
+        async def action() -> Analytics:
+            return counter.analytics(key, read_window(request))
+
+        return await guarded(request, action)
 
     return router
+
+
+async def read_event_id(request: Request) -> str:
+    # Coerce a missing, non-string, or malformed body to an empty id so the
+    # engine produces the single authoritative invalid_event_id error, matching
+    # the Express adapter rather than hardcoding a domain message here.
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = None
+    raw = payload.get("eventId") if isinstance(payload, dict) else None
+    return raw if isinstance(raw, str) else ""
+
+
+def read_window(request: Request) -> str:
+    # A single window value is forwarded to the engine; an absent or repeated
+    # param falls back to the default, mirroring the Express adapter.
+    values = request.query_params.getlist("window")
+    return values[0] if len(values) == 1 else "7d"
 
 
 def forbidden() -> JSONResponse:

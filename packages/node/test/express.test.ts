@@ -51,6 +51,27 @@ test('executes the shared conformance scenarios', async () => {
   }
 })
 
+test('records events without host-provided body parsing', async () => {
+  const counter = new WaveCounter({ databasePath: await databasePath() })
+  const app = express()
+  app.use('/api/waves', createWaveRouter(counter))
+
+  const created = await request(app)
+    .post('/api/waves/counters/coffee/events')
+    .send({ eventId: '0198f2f7-6d42-7d94-b1a6-e4305543f132' })
+  const malformed = await request(app)
+    .post('/api/waves/counters/coffee/events')
+    .set('content-type', 'application/json')
+    .send('{')
+
+  expect(created.status).toBe(201)
+  expect(created.body.total).toBe(1)
+  expect(malformed.status).toBe(400)
+  expect(malformed.body).toEqual({
+    error: { code: 'invalid_event_id', message: 'event ID must be a UUIDv7' },
+  })
+})
+
 test('supports host authorization callbacks', async () => {
   const counter = new WaveCounter({ databasePath: await databasePath() })
   const app = appFor(counter, (incoming) => incoming.header('x-key') === 'yes')
