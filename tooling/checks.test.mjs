@@ -3,6 +3,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import { parseDocument } from 'yaml'
 
 import { inspectVersions } from './check-versions.mjs'
 import { validateConformance } from './check-conformance.mjs'
@@ -68,6 +69,31 @@ test('integrates the React package into consumer documentation and releases', as
   assert.match(ci, /npm test --workspace @waves-counter\/react/)
   assert.match(release, /npm run build --workspace @waves-counter\/react/)
   assert.match(release, /npm publish \.\/packages\/react/)
+})
+
+test('uses lean current runtime CI matrices', async () => {
+  const source = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  const workflow = parseDocument(source).toJS()
+  const expectedPython = [
+    { os: 'ubuntu-latest', python: '3.14' },
+    { os: 'macos-latest', python: '3.14' },
+    { os: 'windows-latest', python: '3.14' },
+  ]
+  const expectedNode = [
+    { os: 'ubuntu-latest', node: 24 },
+    { os: 'ubuntu-latest', node: 26 },
+    { os: 'macos-latest', node: 24 },
+    { os: 'macos-latest', node: 26 },
+    { os: 'windows-latest', node: 24 },
+    { os: 'windows-latest', node: 26 },
+  ]
+
+  assert.deepEqual(workflow.jobs.python.strategy.matrix, { include: expectedPython })
+  assert.deepEqual(workflow.jobs['runtime-smoke-python'].strategy.matrix, {
+    include: expectedPython,
+  })
+  assert.deepEqual(workflow.jobs.node.strategy.matrix, { include: expectedNode })
+  assert.deepEqual(workflow.jobs['runtime-smoke-node'].strategy.matrix, { include: expectedNode })
 })
 
 test('prepares the canonical npm scope', () => {

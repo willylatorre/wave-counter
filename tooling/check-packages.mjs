@@ -5,6 +5,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseDocument } from 'yaml'
 
 const REPOSITORY = 'git+https://github.com/willylatorre/wave-counter.git'
+const CURRENT_PYTHON_CI_MATRIX = [
+  { os: 'ubuntu-latest', python: '3.14' },
+  { os: 'macos-latest', python: '3.14' },
+  { os: 'windows-latest', python: '3.14' },
+]
+const CURRENT_NODE_CI_MATRIX = [
+  { os: 'ubuntu-latest', node: 24 },
+  { os: 'ubuntu-latest', node: 26 },
+  { os: 'macos-latest', node: 24 },
+  { os: 'macos-latest', node: 26 },
+  { os: 'windows-latest', node: 24 },
+  { os: 'windows-latest', node: 26 },
+]
 
 export async function validatePackages(rootInput) {
   const root = rootInput instanceof URL ? fileURLToPath(rootInput) : rootInput
@@ -56,20 +69,25 @@ export async function validatePackages(rootInput) {
 
   const ci = await readFile(join(root, '.github/workflows/ci.yml'), 'utf8')
   const release = await readFile(join(root, '.github/workflows/release.yml'), 'utf8')
-  for (const [name, source] of [
-    ['ci.yml', ci],
-    ['release.yml', release],
+  const ciDocument = parseDocument(ci)
+  const releaseDocument = parseDocument(release)
+  for (const [name, document] of [
+    ['ci.yml', ciDocument],
+    ['release.yml', releaseDocument],
   ]) {
-    const document = parseDocument(source)
     for (const error of document.errors) errors.push(`${name}: ${error.message}`)
   }
+  const ciWorkflow = ciDocument.toJS()
 
-  for (const pythonVersion of ['3.10', '3.11', '3.12', '3.13', '3.14']) {
-    if (!ci.includes(`'${pythonVersion}'`)) errors.push(`CI must cover Python ${pythonVersion}`)
-  }
-  for (const nodeVersion of ['20', '22', '24']) {
-    if (!ci.match(new RegExp(`node: \\[.*\\b${nodeVersion}\\b`))) {
-      errors.push(`CI must cover Node ${nodeVersion}`)
+  for (const [jobName, matrix] of [
+    ['python', CURRENT_PYTHON_CI_MATRIX],
+    ['runtime-smoke-python', CURRENT_PYTHON_CI_MATRIX],
+    ['node', CURRENT_NODE_CI_MATRIX],
+    ['runtime-smoke-node', CURRENT_NODE_CI_MATRIX],
+  ]) {
+    const actual = ciWorkflow?.jobs?.[jobName]?.strategy?.matrix
+    if (JSON.stringify(actual) !== JSON.stringify({ include: matrix })) {
+      errors.push(`CI ${jobName} job must use the current lean compatibility matrix`)
     }
   }
   for (const os of ['ubuntu-latest', 'macos-latest', 'windows-latest']) {
