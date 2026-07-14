@@ -2,7 +2,7 @@
 
 Self-hosted anonymous counters for websites and apps.
 
-Wave Counter gives you atomic SQLite persistence, idempotent events, seven-day UTC analytics, FastAPI and Express routers, a framework-neutral browser client, and accessible React and Vue components. The storage engine is shared across Python and Node through Rust, while the host app keeps ownership of authentication, CORS, rate limiting, deployment, backups, and the SQLite file.
+Wave Counter gives you atomic SQLite persistence, idempotent events, UTC analytics windows, FastAPI and Express routers, a framework-neutral browser client, and accessible React and Vue components. The storage engine is shared across Python and Node through Rust, while the host app keeps ownership of authentication, CORS, rate limiting, deployment, backups, and the SQLite file.
 
 ## Packages
 
@@ -23,10 +23,11 @@ Mount either backend router at a prefix you control, such as `/api/waves`. Both 
 ```text
 GET  /counters/{key}
 POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
+GET  /counters/{key}/analytics?window=7d|1M|all
 ```
 
 The event body is `{ "eventId": "<UUIDv7>" }`. A new event returns `201`; replaying the same ID returns `200` without incrementing again. Unknown counters read as virtual zero counters. Configured baseline counts are inserted once and never overwrite stored totals.
+Analytics default to `window=7d`; `1M` returns the last 30 UTC days, and `all` returns daily buckets from the first recorded event through today.
 
 ## FastAPI
 

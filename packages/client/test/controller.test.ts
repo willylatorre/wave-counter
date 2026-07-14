@@ -3,6 +3,7 @@ import { expect, test, vi } from 'vitest'
 import {
   WaveCounterController,
   type Analytics,
+  type AnalyticsWindow,
   type CounterSnapshot,
   type WaveCounterTransport,
 } from '../src/index.js'
@@ -17,6 +18,16 @@ const analytics: Analytics = {
   previousTotal: 0,
   changePercentage: null,
   points: [],
+}
+
+function analyticsFor(window: AnalyticsWindow): Analytics {
+  return {
+    ...analytics,
+    window,
+    total: window === 'all' ? 9 : analytics.total,
+    previousTotal: window === 'all' ? 0 : analytics.previousTotal,
+    changePercentage: window === 'all' ? null : analytics.changePercentage,
+  }
 }
 
 function transport(overrides: Partial<WaveCounterTransport> = {}): WaveCounterTransport {
@@ -137,6 +148,23 @@ test('controls stats at runtime and never loads while disabled', async () => {
 
   controller.enableStats(false)
   expect(controller.snapshot).toMatchObject({ statsEnabled: false, statsOpen: false })
+})
+
+test('loads and switches analytics windows', async () => {
+  const getAnalytics = vi
+    .fn()
+    .mockImplementation((_key: string, window: AnalyticsWindow = '7d') =>
+      Promise.resolve(analyticsFor(window)),
+    )
+  const controller = new WaveCounterController('coffee', transport({ getAnalytics }))
+
+  await controller.openStats()
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', '7d')
+  expect(controller.snapshot).toMatchObject({ analyticsWindow: '7d', analytics: analyticsFor('7d') })
+
+  await controller.setAnalyticsWindow('all')
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', 'all')
+  expect(controller.snapshot).toMatchObject({ analyticsWindow: 'all', analytics: analyticsFor('all') })
 })
 
 test('keeps analytics errors inside stats and retries', async () => {

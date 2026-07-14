@@ -22,12 +22,18 @@ pub struct RecordEventResult {
 pub enum AnalyticsWindow {
     #[serde(rename = "7d")]
     SevenDays,
+    #[serde(rename = "1M")]
+    OneMonth,
+    #[serde(rename = "all")]
+    AllTime,
 }
 
 impl AnalyticsWindow {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::SevenDays => "7d",
+            Self::OneMonth => "1M",
+            Self::AllTime => "all",
         }
     }
 }
@@ -38,6 +44,8 @@ impl std::str::FromStr for AnalyticsWindow {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "7d" => Ok(Self::SevenDays),
+            "1M" => Ok(Self::OneMonth),
+            "all" => Ok(Self::AllTime),
             _ => Err(WaveCounterError::InvalidAnalyticsWindow),
         }
     }

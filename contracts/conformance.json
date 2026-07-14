@@ -96,6 +96,24 @@
           }
         }
       ]
+    },
+    {
+      "name": "expanded analytics windows are accepted",
+      "initialCounts": {},
+      "steps": [
+        {
+          "method": "GET",
+          "path": "/counters/coffee/analytics?window=1M",
+          "status": 200,
+          "bodyIncludes": { "key": "coffee", "window": "1M", "interval": "day", "timezone": "UTC" }
+        },
+        {
+          "method": "GET",
+          "path": "/counters/coffee/analytics?window=all",
+          "status": 200,
+          "bodyIncludes": { "key": "coffee", "window": "all", "interval": "day", "timezone": "UTC" }
+        }
+      ]
     }
   ]
 }

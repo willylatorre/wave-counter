@@ -9,6 +9,7 @@ export type {
 export type {
   Analytics,
   AnalyticsPoint,
+  AnalyticsWindow,
   CounterSnapshot,
   WaveCounterTransport,
 } from './types.js'

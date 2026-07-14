@@ -76,6 +76,7 @@
 
 .wave-counter__trigger:focus-visible,
 .wave-counter__close:focus-visible,
+.wave-counter__window-switch button:focus-visible,
 .wave-counter__error button:focus-visible {
   outline: 3px solid color-mix(in oklch, var(--wave-accent), transparent 55%);
   outline-offset: 2px;
@@ -157,6 +158,12 @@
   margin-bottom: 1rem;
 }
 
+.wave-counter__heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .wave-counter__heading h2,
 .wave-counter__eyebrow,
 .wave-counter__comparison,
@@ -179,6 +186,36 @@
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.wave-counter__window-switch {
+  display: inline-flex;
+  padding: 0.125rem;
+  border: 1px solid var(--wave-border);
+  border-radius: 999px;
+  background: var(--wave-surface);
+}
+
+.wave-counter__window-switch button {
+  min-width: 2rem;
+  padding: 0.1875rem 0.4375rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wave-muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 130ms ease,
+    color 130ms ease;
+}
+
+.wave-counter__window-switch button[aria-pressed='true'] {
+  background: color-mix(in oklch, var(--wave-accent), var(--wave-raised) 84%);
+  color: var(--wave-ink);
 }
 
 .wave-counter__close {
@@ -315,6 +352,10 @@
 
   .wave-counter__close:hover {
     background: var(--wave-surface);
+    color: var(--wave-ink);
+  }
+
+  .wave-counter__window-switch button:hover {
     color: var(--wave-ink);
   }
 }

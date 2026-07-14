@@ -11,6 +11,7 @@ import {
   WaveCounterClient,
   WaveCounterController,
   type Analytics,
+  type AnalyticsWindow,
   type CounterSnapshot,
   type WaveCounterState,
   type WaveCounterTransport,
@@ -20,6 +21,7 @@ export interface UseWaveCounterOptions {
   counterKey: string
   endpoint?: string
   showStats?: boolean
+  analyticsWindow?: AnalyticsWindow
   transport?: WaveCounterTransport
 }
 
@@ -27,6 +29,7 @@ export interface UseWaveCounterResult {
   state: ShallowRef<Readonly<WaveCounterState>>
   counter: ComputedRef<CounterSnapshot | null>
   analytics: ComputedRef<Analytics | null>
+  analyticsWindow: ComputedRef<AnalyticsWindow>
   loading: ComputedRef<boolean>
   pendingIncrements: ComputedRef<number>
   analyticsLoading: ComputedRef<boolean>
@@ -40,7 +43,8 @@ export interface UseWaveCounterResult {
   openStats: () => Promise<void>
   closeStats: () => void
   toggleStats: () => Promise<void>
-  loadAnalytics: () => Promise<void>
+  setAnalyticsWindow: (window: AnalyticsWindow) => Promise<void>
+  loadAnalytics: (window?: AnalyticsWindow) => Promise<void>
 }
 
 export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterResult {
@@ -50,7 +54,10 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
   const controller = new WaveCounterController(
     options.counterKey,
     transport,
-    options.showStats === undefined ? {} : { showStats: options.showStats },
+    {
+      ...(options.showStats === undefined ? {} : { showStats: options.showStats }),
+      ...(options.analyticsWindow === undefined ? {} : { analyticsWindow: options.analyticsWindow }),
+    },
   )
   const state = shallowRef<Readonly<WaveCounterState>>(controller.snapshot)
   const unsubscribe = controller.subscribe((snapshot) => {
@@ -62,6 +69,7 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
     state,
     counter: computed(() => state.value.counter),
     analytics: computed(() => state.value.analytics),
+    analyticsWindow: computed(() => state.value.analyticsWindow),
     loading: computed(() => state.value.loading),
     pendingIncrements: computed(() => state.value.pendingIncrements),
     analyticsLoading: computed(() => state.value.analyticsLoading),
@@ -75,6 +83,7 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
     openStats: () => controller.openStats(),
     closeStats: () => controller.closeStats(),
     toggleStats: () => controller.toggleStats(),
-    loadAnalytics: () => controller.loadAnalytics(),
+    setAnalyticsWindow: (window) => controller.setAnalyticsWindow(window),
+    loadAnalytics: (window) => controller.loadAnalytics(window),
   }
 }

@@ -2,7 +2,7 @@
 
 Accessible Vue component and composable for Wave Counter.
 
-Use it to drop an optimistic counter button into a Vue app, backed by your own Wave Counter API. The component includes keyboard and pointer interactions, a seven-day analytics popover, default styles, and customization hooks.
+Use it to drop an optimistic counter button into a Vue app, backed by your own Wave Counter API. The component includes keyboard and pointer interactions, selectable analytics windows, default styles, and customization hooks.
 
 ## Install
 
@@ -34,7 +34,7 @@ import '@waves-counter/vue/styles.css'
 ```text
 GET  /counters/{key}
 POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
+GET  /counters/{key}/analytics?window=7d|1M|all
 ```
 
 ## Component behavior
@@ -54,6 +54,7 @@ GET  /counters/{key}/analytics?window=7d
 | `theme` | `'auto' \| 'light' \| 'dark'` | `'auto'` | Color mode. Auto follows `prefers-color-scheme`; explicit light and dark ignore the OS setting. |
 | `icon` | `Component` | Coffee icon | Component rendered inside the trigger. |
 | `showStats` | `boolean` | `true` | Enables analytics interactions and popover. |
+| `analyticsWindow` | `'7d' \| '1M' \| 'all'` | `'7d'` | Initial analytics window. Visitors can switch it in the default popover. |
 | `longPressMs` | `number` | `550` | Touch long-press delay before opening analytics. |
 | `transport` | `WaveCounterTransport` | Generated client | Custom transport for tests or advanced integrations. |
 
@@ -76,10 +77,12 @@ GET  /counters/{key}/analytics?window=7d
     <small v-if="pending">syncing…</small>
   </template>
 
-  <template #analytics="{ analytics, loading, error, retry }">
+  <template #analytics="{ analytics, window, loading, error, setWindow, retry }">
     <p v-if="loading">Loading…</p>
     <button v-else-if="error" type="button" @click="retry">Retry</button>
-    <pre v-else>{{ analytics }}</pre>
+    <button v-else type="button" @click="setWindow(window === 'all' ? '7d' : 'all')">
+      {{ analytics?.total ?? 0 }} events
+    </button>
   </template>
 </WaveCounter>
 ```
@@ -109,6 +112,7 @@ Returned refs and methods:
 wave.state
 wave.counter
 wave.analytics
+wave.analyticsWindow
 wave.loading
 wave.pendingIncrements
 wave.analyticsLoading
@@ -122,6 +126,7 @@ wave.enableStats(false)
 wave.openStats()
 wave.closeStats()
 wave.toggleStats()
+wave.setAnalyticsWindow('all')
 wave.loadAnalytics()
 ```
 

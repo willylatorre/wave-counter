@@ -9,9 +9,11 @@ export interface AnalyticsPoint {
   count: number
 }
 
+export type AnalyticsWindow = '7d' | '1M' | 'all'
+
 export interface Analytics {
   key: string
-  window: '7d'
+  window: AnalyticsWindow
   interval: 'day'
   timezone: 'UTC'
   total: number
@@ -23,6 +25,5 @@ export interface Analytics {
 export interface WaveCounterTransport {
   getCounter(key: string): Promise<CounterSnapshot>
   increment(key: string): Promise<CounterSnapshot>
-  getAnalytics(key: string): Promise<Analytics>
+  getAnalytics(key: string, window?: AnalyticsWindow): Promise<Analytics>
 }
-

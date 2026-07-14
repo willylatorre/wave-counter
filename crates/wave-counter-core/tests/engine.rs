@@ -73,10 +73,18 @@ fn rejects_non_v7_event_ids() {
 }
 
 #[test]
-fn parses_only_the_supported_analytics_window() {
+fn parses_supported_analytics_windows() {
     assert_eq!(
         "7d".parse::<AnalyticsWindow>().unwrap(),
         AnalyticsWindow::SevenDays
+    );
+    assert_eq!(
+        "1M".parse::<AnalyticsWindow>().unwrap(),
+        AnalyticsWindow::OneMonth
+    );
+    assert_eq!(
+        "all".parse::<AnalyticsWindow>().unwrap(),
+        AnalyticsWindow::AllTime
     );
     let error = "30d"
         .parse::<AnalyticsWindow>()
@@ -149,6 +157,90 @@ fn returns_seven_utc_buckets_and_previous_period_comparison() {
     assert_eq!(json["window"], "7d");
     assert_eq!(json["interval"], "day");
     assert_eq!(json["timezone"], "UTC");
+}
+
+#[test]
+fn returns_one_month_daily_buckets_and_previous_period_comparison() {
+    let (_directory, counter) = test_counter();
+    let now = Utc.with_ymd_and_hms(2026, 7, 10, 13, 42, 0).unwrap();
+    let timestamps = [
+        Utc.with_ymd_and_hms(2026, 5, 31, 12, 0, 0).unwrap(),
+        Utc.with_ymd_and_hms(2026, 6, 10, 23, 59, 59).unwrap(),
+        Utc.with_ymd_and_hms(2026, 6, 11, 0, 0, 0).unwrap(),
+        Utc.with_ymd_and_hms(2026, 6, 25, 11, 0, 0).unwrap(),
+        Utc.with_ymd_and_hms(2026, 7, 10, 13, 41, 59).unwrap(),
+    ];
+    for timestamp in timestamps {
+        counter
+            .record_event_at(
+                "coffee",
+                &event_id(timestamp.timestamp_millis() as u64),
+                timestamp,
+            )
+            .unwrap();
+    }
+
+    let analytics = counter
+        .analytics("coffee", AnalyticsWindow::OneMonth, now)
+        .expect("analytics");
+
+    assert_eq!(analytics.window, AnalyticsWindow::OneMonth);
+    assert_eq!(analytics.total, 3);
+    assert_eq!(analytics.previous_total, 2);
+    assert_eq!(analytics.change_percentage, Some(50.0));
+    assert_eq!(analytics.points.len(), 30);
+    assert_eq!(
+        analytics.points[0].start.to_rfc3339(),
+        "2026-06-11T00:00:00+00:00"
+    );
+    assert_eq!(analytics.points[0].count, 1);
+    assert_eq!(analytics.points[14].count, 1);
+    assert_eq!(analytics.points[29].count, 1);
+
+    let json: serde_json::Value =
+        serde_json::from_str(&serde_json::to_string(&analytics).unwrap()).unwrap();
+    assert_eq!(json["window"], "1M");
+}
+
+#[test]
+fn returns_all_time_daily_buckets_from_first_event_without_comparison() {
+    let (_directory, counter) = test_counter();
+    let now = Utc.with_ymd_and_hms(2026, 7, 10, 13, 42, 0).unwrap();
+    let timestamps = [
+        Utc.with_ymd_and_hms(2026, 6, 8, 12, 0, 0).unwrap(),
+        Utc.with_ymd_and_hms(2026, 6, 10, 23, 0, 0).unwrap(),
+        Utc.with_ymd_and_hms(2026, 7, 10, 13, 41, 59).unwrap(),
+    ];
+    for timestamp in timestamps {
+        counter
+            .record_event_at(
+                "coffee",
+                &event_id(timestamp.timestamp_millis() as u64),
+                timestamp,
+            )
+            .unwrap();
+    }
+
+    let analytics = counter
+        .analytics("coffee", AnalyticsWindow::AllTime, now)
+        .expect("analytics");
+
+    assert_eq!(analytics.window, AnalyticsWindow::AllTime);
+    assert_eq!(analytics.total, 3);
+    assert_eq!(analytics.previous_total, 0);
+    assert_eq!(analytics.change_percentage, None);
+    assert_eq!(analytics.points.len(), 33);
+    assert_eq!(
+        analytics.points[0].start.to_rfc3339(),
+        "2026-06-08T00:00:00+00:00"
+    );
+    assert_eq!(analytics.points[0].count, 1);
+    assert_eq!(analytics.points[2].count, 1);
+    assert_eq!(analytics.points[32].count, 1);
+
+    let json: serde_json::Value =
+        serde_json::from_str(&serde_json::to_string(&analytics).unwrap()).unwrap();
+    assert_eq!(json["window"], "all");
 }
 
 #[test]
