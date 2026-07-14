@@ -61,7 +61,7 @@ impl NativeWaveCounter {
 }
 
 fn domain_error(error: WaveCounterError) -> PyErr {
-    PyRuntimeError::new_err(format!("{}|{error}", error.code().as_str()))
+    PyRuntimeError::new_err(error.wire())
 }
 
 fn serialization_error(error: serde_json::Error) -> PyErr {
