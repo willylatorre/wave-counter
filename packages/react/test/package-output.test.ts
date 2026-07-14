@@ -4,12 +4,14 @@ import { resolve } from 'node:path'
 
 import { beforeAll, expect, test } from 'vitest'
 
+import { npmCommandFor } from './npm-command.js'
+
 const packageDirectory = resolve(import.meta.dirname, '..')
 let bundle = ''
 let declarations = ''
 
 beforeAll(async () => {
-  execFileSync('npm', ['run', 'build'], {
+  execFileSync(npmCommandFor(process.platform), ['run', 'build'], {
     cwd: packageDirectory,
     env: { ...process.env, NODE_ENV: 'production' },
     stdio: 'inherit',
