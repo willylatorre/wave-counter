@@ -2,6 +2,14 @@ import { resolve } from 'node:path'
 
 import { defineConfig } from 'vitest/config'
 
+const isExternalDependency = (id: string) => (
+  id === '@waves-counter/client'
+  || id === 'react'
+  || id.startsWith('react/')
+  || id === 'react-dom'
+  || id.startsWith('react-dom/')
+)
+
 export default defineConfig({
   build: {
     lib: {
@@ -10,7 +18,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', '@waves-counter/client'],
+      external: isExternalDependency,
       output: { assetFileNames: 'styles.css' },
     },
   },

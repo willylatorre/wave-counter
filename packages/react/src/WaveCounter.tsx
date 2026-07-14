@@ -12,10 +12,12 @@ import { AnalyticsChart } from './AnalyticsChart.js'
 import { CoffeeIcon } from './CoffeeIcon.js'
 import { useWaveCounter } from './useWaveCounter.js'
 
+export type WaveCounterTheme = 'auto' | 'light' | 'dark'
+
 export interface WaveCounterProps {
   counterKey: string
   endpoint: string
-  theme?: 'auto' | 'light' | 'dark'
+  theme?: WaveCounterTheme
   icon?: ReactNode | (() => ReactNode)
   showStats?: boolean
   longPressMs?: number
