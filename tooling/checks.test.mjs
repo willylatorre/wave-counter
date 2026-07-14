@@ -70,6 +70,7 @@ test('integrates the React package into consumer documentation and releases', as
   assert.match(ci, /npm test --workspace @waves-counter\/react/)
   assert.match(release, /npm run build --workspace @waves-counter\/react/)
   assert.match(release, /npm publish \.\/packages\/react/)
+  assert.match(release, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/)
 })
 
 test('uses lean current runtime CI matrices', async () => {

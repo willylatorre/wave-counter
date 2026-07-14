@@ -85,6 +85,8 @@ jobs:
   publish-npm:
     needs: node-prebuilds
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     environment:
       name: npm
       url: https://www.npmjs.com/package/@waves-counter/react

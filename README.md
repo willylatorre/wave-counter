@@ -179,6 +179,8 @@ npm test --workspace @waves-counter/playground
 
 ## Releases
 
-Tags named `v<version>` build Python wheels and Node prebuilds on Linux, macOS, and Windows. PyPI and npm publishing use OIDC trusted publishers. Configure the `release.yml` workflow as the trusted publisher for `wave-counter` on PyPI and each npm package before pushing the first tag.
+Tags named `v<version>` build Python wheels and Node prebuilds on Linux, macOS, and Windows. PyPI and npm publishing use OIDC trusted publishers. For a new PyPI project, create a pending publisher for `wave-counter` that points at `release.yml` with the `pypi` environment before pushing the first tag.
 
-The npm scope is `@waves-counter`. Configure the `release.yml` workflow as a trusted publisher for each npm package before pushing the first release tag.
+npm trusted publishers are configured per package after the npm package exists. To bootstrap a new npm package from CI, create a temporary granular npm token with package publish access, save it as the repository secret `NPM_TOKEN`, publish one release, then configure the package's trusted publisher for `release.yml` with the `npm` environment and revoke the token.
+
+The npm scope is `@waves-counter`. After a package exists, configure the `release.yml` workflow as its trusted publisher before the next release.
