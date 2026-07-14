@@ -1,4 +1,9 @@
-import { Router, type Request, type RequestHandler, type Response } from 'express'
+import express, {
+  Router,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express'
 
 import { WaveCounterError, type WaveCounterEngine } from './index.js'
 
@@ -13,19 +18,18 @@ export function createWaveRouter(
   options: WaveRouterOptions = {},
 ): Router {
   const router = Router()
+  router.use(parseBody())
 
   router.get(
     '/counters/:key',
-    route(async (request, response) => {
-      if (!(await allowed(request, options.authorize))) return forbidden(response)
+    guarded(options, async (request, response) => {
       response.json(await counter.getCounter(parameter(request.params.key)))
     }),
   )
 
   router.post(
     '/counters/:key/events',
-    route(async (request, response) => {
-      if (!(await allowed(request, options.authorize))) return forbidden(response)
+    guarded(options, async (request, response) => {
       const eventId = typeof request.body?.eventId === 'string' ? request.body.eventId : ''
       const result = await counter.recordEvent(parameter(request.params.key), eventId)
       response.status(result.created ? 201 : 200).json(result.counter)
@@ -34,8 +38,7 @@ export function createWaveRouter(
 
   router.get(
     '/counters/:key/analytics',
-    route(async (request, response) => {
-      if (!(await allowed(request, options.authorize))) return forbidden(response)
+    guarded(options, async (request, response) => {
       const window = typeof request.query.window === 'string' ? request.query.window : '7d'
       response.json(await counter.analytics(parameter(request.params.key), window))
     }),
@@ -44,15 +47,33 @@ export function createWaveRouter(
   return router
 }
 
+function parseBody(): RequestHandler {
+  // Parse JSON bodies inside the router so hosts need not mount their own
+  // middleware. A malformed body is coerced to empty rather than aborting the
+  // request, so the engine produces the authoritative invalid_event_id error,
+  // matching the Python adapter's read_event_id.
+  const json = express.json()
+  return (request, response, next) => {
+    json(request, response, (error: unknown) => {
+      if (error) request.body = {}
+      next()
+    })
+  }
+}
+
 function parameter(value: string | string[] | undefined): string {
   return typeof value === 'string' ? value : ''
 }
 
-function route(
+function guarded(
+  options: WaveRouterOptions,
   handler: (request: Request, response: Response) => Promise<void | Response>,
 ): RequestHandler {
   return (request, response) => {
-    void handler(request, response).catch((error: unknown) => errorResponse(response, error))
+    void (async () => {
+      if (!(await allowed(request, options.authorize))) return forbidden(response)
+      return handler(request, response)
+    })().catch((error: unknown) => errorResponse(response, error))
   }
 }
 
