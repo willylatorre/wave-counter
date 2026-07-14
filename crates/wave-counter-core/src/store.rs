@@ -1,10 +1,17 @@
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+    path::PathBuf,
+    sync::{Arc, Mutex, PoisonError},
+    time::Duration,
+};
 
-use chrono::{DateTime, Duration as ChronoDuration, TimeZone, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, NaiveTime, TimeZone, Utc};
 use rusqlite::{Connection, OpenFlags, OptionalExtension, TransactionBehavior, params};
 
 use crate::{
-    Analytics, AnalyticsPoint, AnalyticsWindow, CounterSnapshot, RecordEventResult,
+    Analytics, AnalyticsInterval, AnalyticsPoint, AnalyticsTimezone, AnalyticsWindow,
+    CounterSnapshot, RecordEventResult,
     error::{Result, WaveCounterError},
     validation,
 };
@@ -69,32 +76,31 @@ impl Default for Config {
 pub struct WaveCounter {
     database_path: PathBuf,
     busy_timeout: Duration,
+    pool: Arc<Mutex<Vec<Connection>>>,
 }
 
 impl WaveCounter {
     pub fn open(config: Config) -> Result<Self> {
-        for (key, total) in &config.initial_counts {
+        for key in config.initial_counts.keys() {
             validation::counter_key(key)?;
-            i64::try_from(*total).map_err(|_| {
-                WaveCounterError::Configuration(format!(
-                    "initial count for '{key}' exceeds SQLite integer range"
-                ))
-            })?;
         }
 
         let counter = Self {
             database_path: config.database_path,
             busy_timeout: config.busy_timeout,
+            pool: Arc::new(Mutex::new(Vec::new())),
         };
-        let mut connection = counter.connection()?;
+        let mut connection = counter.checkout()?;
         Self::migrate(&mut connection)?;
         Self::seed_initial_counts(&mut connection, &config.initial_counts)?;
+        drop(connection);
         Ok(counter)
     }
 
     pub fn get_counter(&self, key: &str) -> Result<CounterSnapshot> {
         validation::counter_key(key)?;
-        read_snapshot(&self.connection()?, key)
+        let connection = self.checkout()?;
+        read_snapshot(&connection, key)
     }
 
     pub fn record_event(&self, key: &str, event_id: &str) -> Result<RecordEventResult> {
@@ -109,7 +115,7 @@ impl WaveCounter {
     ) -> Result<RecordEventResult> {
         validation::counter_key(key)?;
         validation::event_id(event_id)?;
-        let mut connection = self.connection()?;
+        let mut connection = self.checkout()?;
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let duplicate = transaction
             .query_row(
@@ -161,14 +167,14 @@ impl WaveCounter {
         now: DateTime<Utc>,
     ) -> Result<Analytics> {
         validation::counter_key(key)?;
-        let connection = self.connection()?;
+        let connection = self.checkout()?;
         let today = now.date_naive();
-        let current_start = today
-            .and_hms_opt(0, 0, 0)
-            .expect("midnight is valid")
-            .and_utc()
-            - ChronoDuration::days(6);
+        let current_start = today.and_time(NaiveTime::MIN).and_utc() - ChronoDuration::days(6);
         let previous_start = current_start - ChronoDuration::days(7);
+        // Both windows are half-open [start, end): the current window ends where
+        // the next UTC day begins, so an event at exactly `now` and the
+        // current/previous split use one consistent convention.
+        let current_end = current_start + ChronoDuration::days(7);
 
         let previous_total = count_events(
             &connection,
@@ -185,11 +191,11 @@ impl WaveCounter {
         let mut statement = connection.prepare(
             "SELECT CAST((occurred_at - ?2) / 86400 AS INTEGER) AS bucket, COUNT(*)
              FROM waves_events
-             WHERE counter_key = ?1 AND occurred_at >= ?2 AND occurred_at <= ?3
+             WHERE counter_key = ?1 AND occurred_at >= ?2 AND occurred_at < ?3
              GROUP BY bucket",
         )?;
         let buckets = statement.query_map(
-            params![key, current_start.timestamp(), now.timestamp()],
+            params![key, current_start.timestamp(), current_end.timestamp()],
             |row| Ok((row.get::<_, usize>(0)?, row.get::<_, u64>(1)?)),
         )?;
         for bucket in buckets {
@@ -199,14 +205,19 @@ impl WaveCounter {
             }
         }
         let total = points.iter().map(|point| point.count).sum();
-        let change_percentage = (previous_total != 0)
-            .then(|| ((total as f64 - previous_total as f64) / previous_total as f64) * 100.0);
+        let change_percentage = (previous_total != 0).then(|| {
+            // Precision loss is acceptable: these are event counts feeding a
+            // human-facing percentage, not values needing exact f64 identity.
+            #[allow(clippy::cast_precision_loss)]
+            let (total, previous) = (total as f64, previous_total as f64);
+            ((total - previous) / previous) * 100.0
+        });
 
         Ok(Analytics {
             key: key.to_owned(),
-            window: window.as_str().to_owned(),
-            interval: "day".to_owned(),
-            timezone: "UTC".to_owned(),
+            window,
+            interval: AnalyticsInterval::Day,
+            timezone: AnalyticsTimezone::Utc,
             total,
             previous_total,
             change_percentage,
@@ -214,7 +225,27 @@ impl WaveCounter {
         })
     }
 
-    fn connection(&self) -> Result<Connection> {
+    /// Checks a configured connection out of the pool, opening a fresh one only
+    /// when the pool is empty. The guard returns the connection to the pool on
+    /// drop, so per-operation `PRAGMA` setup runs once per physical connection
+    /// rather than on every call.
+    fn checkout(&self) -> Result<PooledConnection<'_>> {
+        let pooled = self
+            .pool
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .pop();
+        let connection = match pooled {
+            Some(connection) => connection,
+            None => self.build_connection()?,
+        };
+        Ok(PooledConnection {
+            pool: &self.pool,
+            connection: Some(connection),
+        })
+    }
+
+    fn build_connection(&self) -> Result<Connection> {
         let connection = Connection::open_with_flags(
             &self.database_path,
             OpenFlags::SQLITE_OPEN_READ_WRITE
@@ -251,15 +282,16 @@ impl WaveCounter {
         let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let timestamp = Utc::now().timestamp();
         for (key, total) in initial_counts {
+            let baseline = i64::try_from(*total).map_err(|_| {
+                WaveCounterError::Configuration(format!(
+                    "initial count for '{key}' exceeds SQLite integer range"
+                ))
+            })?;
             transaction.execute(
                 "INSERT OR IGNORE INTO waves_counters
                     (key, baseline_count, event_count, created_at, updated_at)
                  VALUES (?1, ?2, 0, ?3, ?3)",
-                params![
-                    key,
-                    i64::try_from(*total).expect("validated count"),
-                    timestamp
-                ],
+                params![key, baseline, timestamp],
             )?;
         }
         transaction.commit()?;
@@ -276,18 +308,23 @@ fn read_snapshot(connection: &Connection, key: &str) -> Result<CounterSnapshot> 
             |row| {
                 let total = row.get::<_, u64>(0)?;
                 let timestamp = row.get::<_, i64>(1)?;
-                Ok(CounterSnapshot {
-                    key: key.to_owned(),
-                    total,
-                    updated_at: Some(
-                        Utc.timestamp_opt(timestamp, 0)
-                            .single()
-                            .expect("SQLite timestamp is representable"),
-                    ),
-                })
+                Ok((total, timestamp))
             },
         )
         .optional()?
+        .map(|(total, timestamp)| -> Result<CounterSnapshot> {
+            let updated_at = Utc.timestamp_opt(timestamp, 0).single().ok_or_else(|| {
+                WaveCounterError::CorruptData(format!(
+                    "counter '{key}' has an out-of-range updated_at timestamp {timestamp}"
+                ))
+            })?;
+            Ok(CounterSnapshot {
+                key: key.to_owned(),
+                total,
+                updated_at: Some(updated_at),
+            })
+        })
+        .transpose()?
         .map_or_else(
             || {
                 Ok(CounterSnapshot {
@@ -307,4 +344,40 @@ fn count_events(connection: &Connection, key: &str, start: i64, end: i64) -> Res
         params![key, start, end],
         |row| row.get(0),
     )?)
+}
+
+/// A connection borrowed from [`WaveCounter`]'s pool. Dereferences to the inner
+/// [`Connection`] and returns it to the pool when dropped.
+struct PooledConnection<'pool> {
+    pool: &'pool Mutex<Vec<Connection>>,
+    connection: Option<Connection>,
+}
+
+impl Deref for PooledConnection<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Self::Target {
+        self.connection
+            .as_ref()
+            .expect("connection is present until drop")
+    }
+}
+
+impl DerefMut for PooledConnection<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.connection
+            .as_mut()
+            .expect("connection is present until drop")
+    }
+}
+
+impl Drop for PooledConnection<'_> {
+    fn drop(&mut self) {
+        if let Some(connection) = self.connection.take() {
+            self.pool
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(connection);
+        }
+    }
 }
