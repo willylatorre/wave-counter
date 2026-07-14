@@ -70,6 +70,27 @@ test('opens analytics with context menu and restores focus on Escape', async () 
   expect(document.activeElement).toBe(trigger)
 })
 
+test('removes the pointer enter-from class after the opening frame', async () => {
+  const frameCallbacks: FrameRequestCallback[] = []
+  const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    frameCallbacks.push(callback)
+    return frameCallbacks.length
+  })
+
+  renderCounter()
+  fireEvent.contextMenu(await screen.findByRole('button'))
+
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog.className).toContain('wave-popover-enter-active')
+  expect(dialog.className).toContain('wave-popover-enter-from')
+
+  await act(() => frameCallbacks.shift()?.(0))
+  expect(dialog.className).toContain('wave-popover-enter-active')
+  expect(dialog.className).not.toContain('wave-popover-enter-from')
+
+  requestAnimationFrame.mockRestore()
+})
+
 test('supports ContextMenu and Shift+F10 keyboard openings', async () => {
   renderCounter()
   const trigger = await screen.findByRole('button')
@@ -127,6 +148,28 @@ test('disables stats interactions when showStats is false', async () => {
   expect(event.defaultPrevented).toBe(false)
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(trigger.hasAttribute('aria-haspopup')).toBe(false)
+})
+
+test('updates showStats without resetting the counter and restores statistics when re-enabled', async () => {
+  const counterTransport = transport()
+  const view = renderCounter(counterTransport)
+  const trigger = await screen.findByRole('button')
+
+  fireEvent.click(trigger)
+  expect(screen.getByTestId('total').textContent).toBe('1')
+  fireEvent.contextMenu(trigger)
+  expect(await screen.findByRole('dialog')).not.toBeNull()
+
+  view.rerender(<WaveCounter counterKey="coffee" endpoint="/api/waves" transport={counterTransport} showStats={false} />)
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByTestId('total').textContent).toBe('1')
+  expect(trigger.hasAttribute('aria-haspopup')).toBe(false)
+
+  view.rerender(<WaveCounter counterKey="coffee" endpoint="/api/waves" transport={counterTransport} showStats />)
+  await waitFor(() => expect(screen.getByRole('button').hasAttribute('aria-haspopup')).toBe(true))
+  fireEvent.contextMenu(screen.getByRole('button'))
+  expect(await screen.findByRole('dialog')).not.toBeNull()
+  expect(screen.getByTestId('total').textContent).toBe('1')
 })
 
 test('sets the requested theme and supports render props', async () => {

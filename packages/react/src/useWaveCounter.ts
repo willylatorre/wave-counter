@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 
 import {
   WaveCounterClient,
@@ -32,8 +32,11 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
         options.transport ?? new WaveCounterClient({ endpoint: options.endpoint ?? '/api/waves' }),
         options.showStats === undefined ? {} : { showStats: options.showStats },
       ),
-    [options.counterKey, options.endpoint, options.showStats, options.transport],
+    [options.counterKey, options.endpoint, options.transport],
   )
+  useEffect(() => {
+    controller.enableStats(options.showStats ?? true)
+  }, [controller, options.showStats])
   const subscribe = useCallback((listener: () => void) => controller.subscribe(listener), [controller])
   const getSnapshot = useCallback(() => controller.snapshot, [controller])
   const state = useSyncExternalStore(
