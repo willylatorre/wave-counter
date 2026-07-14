@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
-import type { Analytics, WaveCounterTransport } from '@waves-counter/client'
+import type { Analytics, AnalyticsWindow, WaveCounterTransport } from '@waves-counter/client'
 
 import AnalyticsChart from './AnalyticsChart.vue'
 import CoffeeIcon from './CoffeeIcon.vue'
@@ -15,6 +15,7 @@ const props = withDefaults(
     theme?: WaveCounterTheme
     icon?: Component
     showStats?: boolean
+    analyticsWindow?: AnalyticsWindow
     longPressMs?: number
     transport?: WaveCounterTransport
   }>(),
@@ -30,6 +31,12 @@ const emit = defineEmits<{
   error: [error: Error]
 }>()
 
+const analyticsWindows: { label: string; window: AnalyticsWindow }[] = [
+  { label: '7D', window: '7d' },
+  { label: '1M', window: '1M' },
+  { label: 'All', window: 'all' },
+]
+
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
 const popover = ref<HTMLElement | null>(null)
@@ -40,6 +47,7 @@ const wave = useWaveCounter({
   counterKey: props.counterKey,
   endpoint: props.endpoint,
   showStats: props.showStats,
+  ...(props.analyticsWindow ? { analyticsWindow: props.analyticsWindow } : {}),
   ...(props.transport ? { transport: props.transport } : {}),
 })
 let longPressTimer: ReturnType<typeof setTimeout> | undefined
@@ -57,9 +65,9 @@ const triggerLabel = computed(() => {
     : ''
   return `Add one ${props.counterKey}. ${count}.${statsHint}`
 })
-const comparison = computed(() => comparisonText(wave.analytics.value))
-const dateRange = computed(() => rangeText(wave.analytics.value))
-const accessibleSummary = computed(() => summaryText(wave.analytics.value))
+const comparison = computed(() => comparisonText(wave.analytics.value, wave.analyticsWindow.value))
+const dateRange = computed(() => rangeText(wave.analytics.value, wave.analyticsWindow.value))
+const accessibleSummary = computed(() => summaryText(wave.analytics.value, wave.analyticsWindow.value))
 
 watch(
   () => props.showStats,
@@ -209,24 +217,38 @@ async function retryAnalytics(): Promise<void> {
   }
 }
 
+async function selectAnalyticsWindow(window: AnalyticsWindow): Promise<void> {
+  try {
+    await wave.setAnalyticsWindow(window)
+    await nextTick()
+    updatePopoverPosition()
+  } catch {
+    // The renewed error remains visible in the popover.
+  }
+}
+
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-function comparisonText(analytics: Analytics | null): string {
+function comparisonText(analytics: Analytics | null, window: AnalyticsWindow): string {
   if (!analytics) return ''
+  if (window === 'all') {
+    return analytics.total === 0 ? 'No all-time events' : `${analytics.total} all-time events`
+  }
+  const previousPeriod = window === '1M' ? 'previous 30 days' : 'previous seven days'
   if (analytics.previousTotal === 0) {
     return analytics.total === 0
-      ? 'No events in this or the previous seven days'
-      : `${analytics.total} events, with none in the previous seven days`
+      ? `No events in this or the ${previousPeriod}`
+      : `${analytics.total} events, with none in the ${previousPeriod}`
   }
   const change = analytics.changePercentage ?? 0
   const direction = change >= 0 ? 'more' : 'less'
-  return `${Math.abs(change)}% ${direction} than the previous seven days`
+  return `${Math.abs(change)}% ${direction} than the ${previousPeriod}`
 }
 
-function rangeText(analytics: Analytics | null): string {
-  if (!analytics?.points.length) return 'Last seven UTC days'
+function rangeText(analytics: Analytics | null, window: AnalyticsWindow): string {
+  if (!analytics?.points.length) return defaultRangeText(window)
   const formatter = new Intl.DateTimeFormat(undefined, {
     month: 'short',
     day: 'numeric',
@@ -236,13 +258,25 @@ function rangeText(analytics: Analytics | null): string {
   const last = analytics.points.at(-1)
   return first && last
     ? `${formatter.format(new Date(first.start))} to ${formatter.format(new Date(last.start))}, UTC`
-    : 'Last seven UTC days'
+    : defaultRangeText(window)
 }
 
-function summaryText(analytics: Analytics | null): string {
+function summaryText(analytics: Analytics | null, window: AnalyticsWindow): string {
   if (!analytics) return ''
   const dailyCounts = analytics.points.map((point) => point.count).join(', ')
-  return `${analytics.total} events in the last seven days. Daily counts: ${dailyCounts}. ${comparisonText(analytics)}.`
+  return `${analytics.total} events in ${windowSummary(window)}. Daily counts: ${dailyCounts}. ${comparisonText(analytics, window)}.`
+}
+
+function defaultRangeText(window: AnalyticsWindow): string {
+  if (window === '1M') return 'Last 30 UTC days'
+  if (window === 'all') return 'All-time UTC activity'
+  return 'Last seven UTC days'
+}
+
+function windowSummary(window: AnalyticsWindow): string {
+  if (window === '1M') return 'the last 30 days'
+  if (window === 'all') return 'all time'
+  return 'the last seven days'
 }
 </script>
 
@@ -297,18 +331,34 @@ function summaryText(analytics: Analytics | null): string {
         <slot
           name="analytics"
           :analytics="wave.analytics.value"
+          :window="wave.analyticsWindow.value"
           :loading="wave.analyticsLoading.value"
           :error="wave.analyticsError.value"
+          :set-window="selectAnalyticsWindow"
           :retry="retryAnalytics"
         >
           <div class="wave-counter__heading">
             <div>
-              <p class="wave-counter__eyebrow">Seven day activity</p>
+              <p class="wave-counter__eyebrow">Activity</p>
               <h2>{{ capitalize(counterKey) }}</h2>
             </div>
-            <button class="wave-counter__close" type="button" aria-label="Close statistics" @click="closeAndRestoreFocus">
-              <span aria-hidden="true">×</span>
-            </button>
+            <div class="wave-counter__heading-actions">
+              <div class="wave-counter__window-switch" aria-label="Activity range">
+                <button
+                  v-for="option in analyticsWindows"
+                  :key="option.window"
+                  type="button"
+                  :aria-label="option.label"
+                  :aria-pressed="wave.analyticsWindow.value === option.window"
+                  @click="selectAnalyticsWindow(option.window)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <button class="wave-counter__close" type="button" aria-label="Close statistics" @click="closeAndRestoreFocus">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
           </div>
 
           <div v-if="wave.analyticsLoading.value" class="wave-counter__loading" role="status">

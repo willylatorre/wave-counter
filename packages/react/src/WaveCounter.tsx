@@ -6,7 +6,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
-import type { Analytics, WaveCounterTransport } from '@waves-counter/client'
+import type { Analytics, AnalyticsWindow, WaveCounterTransport } from '@waves-counter/client'
 
 import { AnalyticsChart } from './AnalyticsChart.js'
 import { CoffeeIcon } from './CoffeeIcon.js'
@@ -20,6 +20,7 @@ export interface WaveCounterProps {
   theme?: WaveCounterTheme
   icon?: ReactNode | (() => ReactNode)
   showStats?: boolean
+  analyticsWindow?: AnalyticsWindow
   longPressMs?: number
   transport?: WaveCounterTransport
   onError?: (error: Error) => void
@@ -30,14 +31,21 @@ export interface WaveCounterProps {
 
 interface AnalyticsRenderState {
   analytics: Analytics | null
+  window: AnalyticsWindow
   loading: boolean
   error: Error | null
+  setWindow: (window: AnalyticsWindow) => Promise<void>
   retry: () => Promise<void>
 }
 
 type OpenSource = 'pointer' | 'keyboard'
 
 const POPOVER_EXIT_MS = 160
+const ANALYTICS_WINDOWS: { label: string; window: AnalyticsWindow }[] = [
+  { label: '7D', window: '7d' },
+  { label: '1M', window: '1M' },
+  { label: 'All', window: 'all' },
+]
 
 export function WaveCounter({
   counterKey,
@@ -45,6 +53,7 @@ export function WaveCounter({
   theme = 'auto',
   icon,
   showStats = true,
+  analyticsWindow,
   longPressMs = 550,
   transport,
   onError,
@@ -72,6 +81,7 @@ export function WaveCounter({
     counterKey,
     endpoint,
     showStats,
+    ...(analyticsWindow ? { analyticsWindow } : {}),
     ...(transport ? { transport } : {}),
   })
   const total = wave.counter?.total
@@ -208,6 +218,16 @@ export function WaveCounter({
     }
   }
 
+  const selectAnalyticsWindow = async (window: AnalyticsWindow) => {
+    try {
+      await wave.setAnalyticsWindow(window)
+    } catch {
+      // The controller retains the analytics error for the retry UI.
+    } finally {
+      requestAnimationFrame(updatePosition)
+    }
+  }
+
   const increment = async () => {
     if (longPressActivated.current) {
       longPressActivated.current = false
@@ -245,9 +265,9 @@ export function WaveCounter({
     }
   }
 
-  const comparison = comparisonText(wave.analytics)
-  const dateRange = rangeText(wave.analytics)
-  const summary = summaryText(wave.analytics)
+  const comparison = comparisonText(wave.analytics, wave.analyticsWindow)
+  const dateRange = rangeText(wave.analytics, wave.analyticsWindow)
+  const summary = summaryText(wave.analytics, wave.analyticsWindow)
   const showPopover = mounted || wave.statsOpen || leaving
   const popoverClasses = [
     'wave-counter__popover',
@@ -322,19 +342,36 @@ export function WaveCounter({
         >
           {renderAnalytics?.({
             analytics: wave.analytics,
+            window: wave.analyticsWindow,
             loading: wave.analyticsLoading,
             error: wave.analyticsError,
+            setWindow: selectAnalyticsWindow,
             retry,
           }) ?? (
             <>
               <div className="wave-counter__heading">
                 <div>
-                  <p className="wave-counter__eyebrow">Seven day activity</p>
+                  <p className="wave-counter__eyebrow">Activity</p>
                   <h2>{capitalize(counterKey)}</h2>
                 </div>
-                <button className="wave-counter__close" type="button" aria-label="Close statistics" onClick={() => dismiss(true)}>
-                  <span aria-hidden="true">×</span>
-                </button>
+                <div className="wave-counter__heading-actions">
+                  <div className="wave-counter__window-switch" aria-label="Activity range">
+                    {ANALYTICS_WINDOWS.map((option) => (
+                      <button
+                        key={option.window}
+                        type="button"
+                        aria-label={option.label}
+                        aria-pressed={wave.analyticsWindow === option.window}
+                        onClick={() => void selectAnalyticsWindow(option.window)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button className="wave-counter__close" type="button" aria-label="Close statistics" onClick={() => dismiss(true)}>
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
               </div>
               {wave.analyticsLoading ? (
                 <div className="wave-counter__loading" role="status">Loading activity</div>
@@ -374,28 +411,44 @@ function describeTrigger(counterKey: string, total: number | undefined, statsEna
   return `Add one ${counterKey}. ${totalDescription}.${statsDescription}`
 }
 
-function comparisonText(analytics: Analytics | null): string {
+function comparisonText(analytics: Analytics | null, window: AnalyticsWindow): string {
   if (!analytics) return ''
+  if (window === 'all') {
+    return analytics.total === 0 ? 'No all-time events' : `${analytics.total} all-time events`
+  }
+  const previousPeriod = window === '1M' ? 'previous 30 days' : 'previous seven days'
   if (analytics.previousTotal === 0) {
     return analytics.total === 0
-      ? 'No events in this or the previous seven days'
-      : `${analytics.total} events, with none in the previous seven days`
+      ? `No events in this or the ${previousPeriod}`
+      : `${analytics.total} events, with none in the ${previousPeriod}`
   }
   const change = analytics.changePercentage ?? 0
-  return `${Math.abs(change)}% ${change >= 0 ? 'more' : 'less'} than the previous seven days`
+  return `${Math.abs(change)}% ${change >= 0 ? 'more' : 'less'} than the ${previousPeriod}`
 }
 
-function rangeText(analytics: Analytics | null): string {
-  if (!analytics?.points.length) return 'Last seven UTC days'
+function rangeText(analytics: Analytics | null, window: AnalyticsWindow): string {
+  if (!analytics?.points.length) return defaultRangeText(window)
   const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
   const first = analytics.points[0]
   const last = analytics.points.at(-1)
   return first && last
     ? `${formatter.format(new Date(first.start))} to ${formatter.format(new Date(last.start))}, UTC`
-    : 'Last seven UTC days'
+    : defaultRangeText(window)
 }
 
-function summaryText(analytics: Analytics | null): string {
+function summaryText(analytics: Analytics | null, window: AnalyticsWindow): string {
   if (!analytics) return ''
-  return `${analytics.total} events in the last seven days. Daily counts: ${analytics.points.map((point) => point.count).join(', ')}. ${comparisonText(analytics)}.`
+  return `${analytics.total} events in ${windowSummary(window)}. Daily counts: ${analytics.points.map((point) => point.count).join(', ')}. ${comparisonText(analytics, window)}.`
+}
+
+function defaultRangeText(window: AnalyticsWindow): string {
+  if (window === '1M') return 'Last 30 UTC days'
+  if (window === 'all') return 'All-time UTC activity'
+  return 'Last seven UTC days'
+}
+
+function windowSummary(window: AnalyticsWindow): string {
+  if (window === '1M') return 'the last 30 days'
+  if (window === 'all') return 'all time'
+  return 'the last seven days'
 }

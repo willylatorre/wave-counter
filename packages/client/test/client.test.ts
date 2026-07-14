@@ -52,6 +52,29 @@ describe('WaveCounterClient', () => {
     ])
   })
 
+  test('requests the selected analytics window', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      response({
+        key: 'coffee',
+        window: '1M',
+        interval: 'day',
+        timezone: 'UTC',
+        total: 1,
+        previousTotal: 0,
+        changePercentage: null,
+        points: [],
+      }),
+    )
+    const client = new WaveCounterClient({ endpoint: '/api/waves', fetch })
+
+    await client.getAnalytics('coffee', '1M')
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/waves/counters/coffee/analytics?window=1M',
+      { headers: { accept: 'application/json' } },
+    )
+  })
+
   test('retries an ambiguous network failure with the same generated UUIDv7', async () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
@@ -95,4 +118,3 @@ describe('WaveCounterClient', () => {
     expect(body.eventId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
   })
 })
-

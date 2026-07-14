@@ -12,7 +12,7 @@ npm install @waves-counter/client
 
 ## What it does
 
-- Calls the Wave Counter HTTP contract: read totals, record idempotent events, and load seven-day analytics.
+- Calls the Wave Counter HTTP contract: read totals, record idempotent events, and load `7d`, `1M`, or `all` analytics.
 - Generates UUIDv7 event IDs by default so retrying an increment does not double-count.
 - Exposes a small `WaveCounterController` for optimistic UI state, pending increments, analytics popovers, and errors.
 - Has no framework dependency and no opinion about auth, routing, styling, or deployment.
@@ -47,7 +47,7 @@ Mount a Wave Counter backend at any prefix and pass that prefix as `endpoint`.
 ```text
 GET  /counters/{key}
 POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
+GET  /counters/{key}/analytics?window=7d|1M|all
 ```
 
 The event request body is:
@@ -81,6 +81,7 @@ await client.getCounter('coffee')
 await client.recordEvent('coffee', '0198f2f7-6d42-7d94-b1a6-e4305543f132')
 await client.increment('coffee')
 await client.getAnalytics('coffee')
+await client.getAnalytics('coffee', '1M')
 ```
 
 Failed HTTP responses throw `WaveCounterHttpError` with `status`, `code`, and `retryAfter`.
@@ -100,6 +101,7 @@ const unsubscribe = controller.subscribe((state) => {
   state.loading
   state.error
   state.analytics
+  state.analyticsWindow
   state.analyticsLoading
   state.analyticsError
   state.statsOpen
@@ -108,13 +110,14 @@ const unsubscribe = controller.subscribe((state) => {
 await controller.load()
 await controller.increment()
 await controller.openStats()
+await controller.setAnalyticsWindow('all')
 controller.closeStats()
 unsubscribe()
 ```
 
 ## TypeScript types
 
-The package ships its own declarations. Useful exported types include `CounterSnapshot`, `Analytics`, `AnalyticsPoint`, `WaveCounterTransport`, `WaveCounterState`, and `WaveCounterListener`.
+The package ships its own declarations. Useful exported types include `CounterSnapshot`, `Analytics`, `AnalyticsPoint`, `AnalyticsWindow`, `WaveCounterTransport`, `WaveCounterState`, and `WaveCounterListener`.
 
 ## Production notes
 

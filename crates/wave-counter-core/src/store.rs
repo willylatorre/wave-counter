@@ -169,22 +169,44 @@ impl WaveCounter {
         validation::counter_key(key)?;
         let connection = self.checkout()?;
         let today = now.date_naive();
-        let current_start = today.and_time(NaiveTime::MIN).and_utc() - ChronoDuration::days(6);
-        let previous_start = current_start - ChronoDuration::days(7);
-        // Both windows are half-open [start, end): the current window ends where
-        // the next UTC day begins, so an event at exactly `now` and the
-        // current/previous split use one consistent convention.
-        let current_end = current_start + ChronoDuration::days(7);
+        let tomorrow_start = today.and_time(NaiveTime::MIN).and_utc() + ChronoDuration::days(1);
+        let current_start = match window {
+            AnalyticsWindow::SevenDays => tomorrow_start - ChronoDuration::days(7),
+            AnalyticsWindow::OneMonth => tomorrow_start - ChronoDuration::days(30),
+            AnalyticsWindow::AllTime => first_event_day_start(&connection, key)?
+                .unwrap_or(tomorrow_start - ChronoDuration::days(1)),
+        };
+        // Windows are half-open [start, end): the current window ends where the
+        // next UTC day begins, so an event at exactly `now` and each period
+        // split use one consistent convention.
+        let current_end = tomorrow_start;
+        let bucket_count = (current_end.date_naive() - current_start.date_naive()).num_days();
+        let bucket_count = usize::try_from(bucket_count).map_err(|_| {
+            WaveCounterError::CorruptData(format!(
+                "analytics window for counter '{key}' produced a negative day span"
+            ))
+        })?;
 
-        let previous_total = count_events(
-            &connection,
-            key,
-            previous_start.timestamp(),
-            current_start.timestamp(),
-        )?;
-        let mut points = (0..7)
+        let previous_total = match window {
+            AnalyticsWindow::SevenDays | AnalyticsWindow::OneMonth => {
+                let period_days = i64::try_from(bucket_count).map_err(|_| {
+                    WaveCounterError::CorruptData(format!(
+                        "analytics window for counter '{key}' is too large to compare"
+                    ))
+                })?;
+                let previous_start = current_start - ChronoDuration::days(period_days);
+                count_events(
+                    &connection,
+                    key,
+                    previous_start.timestamp(),
+                    current_start.timestamp(),
+                )?
+            }
+            AnalyticsWindow::AllTime => 0,
+        };
+        let mut points = (0..bucket_count)
             .map(|offset| AnalyticsPoint {
-                start: current_start + ChronoDuration::days(offset),
+                start: current_start + ChronoDuration::days(offset as i64),
                 count: 0,
             })
             .collect::<Vec<_>>();
@@ -205,13 +227,14 @@ impl WaveCounter {
             }
         }
         let total = points.iter().map(|point| point.count).sum();
-        let change_percentage = (previous_total != 0).then(|| {
-            // Precision loss is acceptable: these are event counts feeding a
-            // human-facing percentage, not values needing exact f64 identity.
-            #[allow(clippy::cast_precision_loss)]
-            let (total, previous) = (total as f64, previous_total as f64);
-            ((total - previous) / previous) * 100.0
-        });
+        let change_percentage =
+            (window != AnalyticsWindow::AllTime && previous_total != 0).then(|| {
+                // Precision loss is acceptable: these are event counts feeding a
+                // human-facing percentage, not values needing exact f64 identity.
+                #[allow(clippy::cast_precision_loss)]
+                let (total, previous) = (total as f64, previous_total as f64);
+                ((total - previous) / previous) * 100.0
+            });
 
         Ok(Analytics {
             key: key.to_owned(),
@@ -344,6 +367,26 @@ fn count_events(connection: &Connection, key: &str, start: i64, end: i64) -> Res
         params![key, start, end],
         |row| row.get(0),
     )?)
+}
+
+fn first_event_day_start(connection: &Connection, key: &str) -> Result<Option<DateTime<Utc>>> {
+    let timestamp = connection.query_row(
+        "SELECT MIN(occurred_at) FROM waves_events WHERE counter_key = ?1",
+        [key],
+        |row| row.get::<_, Option<i64>>(0),
+    )?;
+    timestamp
+        .map(|timestamp| {
+            Utc.timestamp_opt(timestamp, 0)
+                .single()
+                .map(|event_time| event_time.date_naive().and_time(NaiveTime::MIN).and_utc())
+                .ok_or_else(|| {
+                    WaveCounterError::CorruptData(format!(
+                        "counter '{key}' has an out-of-range event timestamp {timestamp}"
+                    ))
+                })
+        })
+        .transpose()
 }
 
 /// A connection borrowed from [`WaveCounter`]'s pool. Dereferences to the inner

@@ -1,8 +1,9 @@
-import type { Analytics, CounterSnapshot, WaveCounterTransport } from './types.js'
+import type { Analytics, AnalyticsWindow, CounterSnapshot, WaveCounterTransport } from './types.js'
 
 export interface WaveCounterState {
   counter: CounterSnapshot | null
   analytics: Analytics | null
+  analyticsWindow: AnalyticsWindow
   loading: boolean
   pendingIncrements: number
   analyticsLoading: boolean
@@ -14,6 +15,7 @@ export interface WaveCounterState {
 
 export interface WaveCounterControllerOptions {
   showStats?: boolean
+  analyticsWindow?: AnalyticsWindow
 }
 
 export type WaveCounterListener = (state: Readonly<WaveCounterState>) => void
@@ -35,6 +37,7 @@ export class WaveCounterController {
     this.#state = {
       counter: null,
       analytics: null,
+      analyticsWindow: options.analyticsWindow ?? '7d',
       loading: false,
       pendingIncrements: 0,
       analyticsLoading: false,
@@ -92,7 +95,9 @@ export class WaveCounterController {
   async openStats(): Promise<void> {
     if (!this.#state.statsEnabled) return
     this.#update({ statsOpen: true })
-    if (this.#state.analytics === null) await this.loadAnalytics()
+    if (this.#state.analytics === null || this.#state.analytics.window !== this.#state.analyticsWindow) {
+      await this.loadAnalytics()
+    }
   }
 
   closeStats(): void {
@@ -104,11 +109,17 @@ export class WaveCounterController {
     else await this.openStats()
   }
 
-  async loadAnalytics(): Promise<void> {
+  async setAnalyticsWindow(window: AnalyticsWindow): Promise<void> {
+    if (window === this.#state.analyticsWindow) return
+    this.#update({ analyticsWindow: window })
+    if (this.#state.statsOpen) await this.loadAnalytics(window)
+  }
+
+  async loadAnalytics(window = this.#state.analyticsWindow): Promise<void> {
     if (!this.#state.statsEnabled) return
-    this.#update({ analyticsLoading: true, analyticsError: null })
+    this.#update({ analyticsWindow: window, analyticsLoading: true, analyticsError: null })
     try {
-      const analytics = await this.#transport.getAnalytics(this.#key)
+      const analytics = await this.#transport.getAnalytics(this.#key, window)
       this.#update({ analytics, analyticsLoading: false })
     } catch (caught) {
       this.#update({ analyticsLoading: false, analyticsError: asError(caught) })

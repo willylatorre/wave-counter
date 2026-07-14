@@ -42,7 +42,7 @@ The router exposes:
 ```text
 GET  /counters/{key}
 POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
+GET  /counters/{key}/analytics?window=7d|1M|all
 ```
 
 ## Direct API

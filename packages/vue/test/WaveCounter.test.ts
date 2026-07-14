@@ -24,6 +24,16 @@ const analytics: Analytics = {
   })),
 }
 
+function analyticsFor(window: Analytics['window']): Analytics {
+  return {
+    ...analytics,
+    window,
+    total: window === 'all' ? 12 : analytics.total,
+    previousTotal: window === 'all' ? 0 : analytics.previousTotal,
+    changePercentage: window === 'all' ? null : analytics.changePercentage,
+  }
+}
+
 function transport(overrides: Partial<WaveCounterTransport> = {}): WaveCounterTransport {
   return {
     getCounter: vi.fn().mockResolvedValue(zero),
@@ -151,6 +161,30 @@ test('draws the analytics line once on each pointer opening', async () => {
   await flushPromises()
 
   expect(wrapper.get('.wave-chart').attributes('data-animate')).toBe('true')
+})
+
+test('switches the analytics window from the default popover controls', async () => {
+  const getAnalytics = vi
+    .fn()
+    .mockImplementation((_key: string, window: Analytics['window'] = '7d') =>
+      Promise.resolve(analyticsFor(window)),
+    )
+  const wrapper = mountCounter(transport({ getAnalytics }))
+  await flushPromises()
+
+  await wrapper.get('button').trigger('contextmenu')
+  await flushPromises()
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', '7d')
+
+  await wrapper.get('button[aria-label="1M"]').trigger('click')
+  await flushPromises()
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', '1M')
+  expect(wrapper.get('button[aria-label="1M"]').attributes('aria-pressed')).toBe('true')
+
+  await wrapper.get('button[aria-label="All"]').trigger('click')
+  await flushPromises()
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', 'all')
+  expect(wrapper.get('button[aria-label="All"]').attributes('aria-pressed')).toBe('true')
 })
 
 test('clamps the popover horizontally inside the viewport', async () => {

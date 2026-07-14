@@ -2,7 +2,7 @@
 
 Accessible React component and hook for Wave Counter.
 
-Use it to add an optimistic counter button to a React app backed by your own Wave Counter API. The component includes keyboard and pointer interactions, a seven-day analytics popover, default styles, and render props for custom presentation.
+Use it to add an optimistic counter button to a React app backed by your own Wave Counter API. The component includes keyboard and pointer interactions, selectable analytics windows, default styles, and render props for custom presentation.
 
 ## Install
 
@@ -34,7 +34,7 @@ export function CoffeeCounter() {
 ```text
 GET  /counters/{key}
 POST /counters/{key}/events
-GET  /counters/{key}/analytics?window=7d
+GET  /counters/{key}/analytics?window=7d|1M|all
 ```
 
 ## Component behavior
@@ -54,6 +54,7 @@ GET  /counters/{key}/analytics?window=7d
 | `theme` | `'auto' \| 'light' \| 'dark'` | `'auto'` | Color mode. Auto follows `prefers-color-scheme`. |
 | `icon` | `ReactNode \| () => ReactNode` | Coffee icon | Icon rendered inside the trigger. |
 | `showStats` | `boolean` | `true` | Enables analytics interactions and popover. |
+| `analyticsWindow` | `'7d' \| '1M' \| 'all'` | `'7d'` | Initial analytics window. Visitors can switch it in the default popover. |
 | `longPressMs` | `number` | `550` | Touch long-press delay before opening analytics. |
 | `transport` | `WaveCounterTransport` | Generated client | Custom transport for tests or advanced integrations. |
 | `onError` | `(error: Error) => void` | — | Called when initial loading or incrementing fails. |
@@ -70,10 +71,10 @@ Use render props when the default component structure does not fit your design:
   counterKey="coffee"
   endpoint="/api/waves"
   renderIcon={() => <span aria-hidden="true">🌊</span>}
-  renderAnalytics={({ analytics, loading, error, retry }) => {
+  renderAnalytics={({ analytics, window, loading, error, setWindow, retry }) => {
     if (loading) return <p>Loading activity…</p>
     if (error) return <button onClick={() => void retry()}>Retry</button>
-    return <p>{analytics?.total ?? 0} events this week</p>
+    return <button onClick={() => void setWindow(window === 'all' ? '7d' : 'all')}>{analytics?.total ?? 0} events</button>
   }}
 >
   {({ total, pending, unavailable }) => (
@@ -104,7 +105,7 @@ export function CoffeeCounter() {
 }
 ```
 
-The hook returns `counter`, `analytics`, `loading`, `pendingIncrements`, `analyticsLoading`, `statsEnabled`, `statsOpen`, `error`, `analyticsError`, and the `load`, `increment`, `enableStats`, `openStats`, `closeStats`, `toggleStats`, and `loadAnalytics` actions.
+The hook returns `counter`, `analytics`, `analyticsWindow`, `loading`, `pendingIncrements`, `analyticsLoading`, `statsEnabled`, `statsOpen`, `error`, `analyticsError`, and the `load`, `increment`, `enableStats`, `openStats`, `closeStats`, `toggleStats`, `setAnalyticsWindow`, and `loadAnalytics` actions.
 
 ## Styling
 

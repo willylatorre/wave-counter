@@ -1,6 +1,6 @@
 import { v7 as uuidv7 } from 'uuid'
 
-import type { Analytics, CounterSnapshot, WaveCounterTransport } from './types.js'
+import type { Analytics, AnalyticsWindow, CounterSnapshot, WaveCounterTransport } from './types.js'
 
 export interface WaveCounterClientOptions {
   endpoint: string
@@ -64,9 +64,9 @@ export class WaveCounterClient implements WaveCounterTransport {
     }
   }
 
-  getAnalytics(key: string): Promise<Analytics> {
+  getAnalytics(key: string, window: AnalyticsWindow = '7d'): Promise<Analytics> {
     return this.#request<Analytics>(
-      `/counters/${encodeURIComponent(key)}/analytics?window=7d`,
+      `/counters/${encodeURIComponent(key)}/analytics?window=${encodeURIComponent(window)}`,
       { headers: { accept: 'application/json' } },
     )
   }
@@ -86,4 +86,3 @@ export class WaveCounterClient implements WaveCounterTransport {
     return body as Result
   }
 }
-

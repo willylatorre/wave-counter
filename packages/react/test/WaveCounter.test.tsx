@@ -18,6 +18,16 @@ const analytics: Analytics = {
   })),
 }
 
+function analyticsFor(window: Analytics['window']): Analytics {
+  return {
+    ...analytics,
+    window,
+    total: window === 'all' ? 12 : analytics.total,
+    previousTotal: window === 'all' ? 0 : analytics.previousTotal,
+    changePercentage: window === 'all' ? null : analytics.changePercentage,
+  }
+}
+
 function transport(overrides: Partial<WaveCounterTransport> = {}): WaveCounterTransport {
   return {
     getCounter: vi.fn().mockResolvedValue(zero),
@@ -150,6 +160,27 @@ test('retries analytics in place after an error', async () => {
   expect((await screen.findByRole('alert')).textContent).toContain('Activity is unavailable')
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
   expect((await screen.findByTestId('accessible-summary')).textContent).toContain('6 events')
+})
+
+test('switches the analytics window from the default popover controls', async () => {
+  const getAnalytics = vi
+    .fn()
+    .mockImplementation((_key: string, window: Analytics['window'] = '7d') =>
+      Promise.resolve(analyticsFor(window)),
+    )
+  renderCounter(transport({ getAnalytics }))
+
+  fireEvent.contextMenu(await screen.findByRole('button'))
+  expect(await screen.findByRole('dialog')).not.toBeNull()
+  expect(getAnalytics).toHaveBeenLastCalledWith('coffee', '7d')
+
+  fireEvent.click(screen.getByRole('button', { name: '1M' }))
+  await waitFor(() => expect(getAnalytics).toHaveBeenLastCalledWith('coffee', '1M'))
+  expect(screen.getByRole('button', { name: '1M' }).getAttribute('aria-pressed')).toBe('true')
+
+  fireEvent.click(screen.getByRole('button', { name: 'All' }))
+  await waitFor(() => expect(getAnalytics).toHaveBeenLastCalledWith('coffee', 'all'))
+  expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
 })
 
 test('disables stats interactions when showStats is false', async () => {
