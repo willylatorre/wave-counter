@@ -1,0 +1,381 @@
+.wave-counter {
+  --wave-radius: var(--wave-counter-radius, 0.875rem);
+  --wave-popover-radius: var(--wave-counter-popover-radius, 1.125rem);
+  --wave-ease-out: var(--wave-counter-motion-easing, cubic-bezier(0.23, 1, 0.32, 1));
+  --wave-press-duration: var(--wave-counter-press-duration, 130ms);
+  --wave-active-duration: var(--wave-counter-active-duration, 80ms);
+  --wave-popover-duration: var(--wave-counter-popover-duration, 240ms);
+  --wave-popover-exit-duration: var(--wave-counter-popover-exit-duration, 160ms);
+  position: relative;
+  display: inline-flex;
+  color: var(--wave-ink);
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.wave-counter[data-theme='light'],
+.wave-counter[data-theme='auto'] {
+  color-scheme: light;
+  --wave-ink: var(--wave-counter-ink, oklch(28% 0.018 215));
+  --wave-muted: var(--wave-counter-muted, oklch(52% 0.025 215));
+  --wave-surface: var(--wave-counter-surface, oklch(97% 0.012 205));
+  --wave-raised: var(--wave-counter-raised, oklch(98.5% 0.008 205));
+  --wave-border: var(--wave-counter-border, oklch(84% 0.02 205));
+  --wave-accent: var(--wave-counter-color, oklch(59% 0.12 194));
+  --wave-accent-strong: var(--wave-counter-color-strong, oklch(48% 0.12 194));
+  --wave-error: var(--wave-counter-error, oklch(55% 0.17 25));
+  --wave-contact-shadow: oklch(28% 0.018 215 / 0.05);
+  --wave-popover-contact-shadow: oklch(28% 0.018 215 / 0.08);
+  --wave-popover-ambient-shadow: oklch(28% 0.018 215 / 0.14);
+}
+
+.wave-counter[data-theme='dark'] {
+  color-scheme: dark;
+  --wave-ink: var(--wave-counter-ink, var(--wave-counter-ink-dark, oklch(92% 0.012 205)));
+  --wave-muted: var(--wave-counter-muted, var(--wave-counter-muted-dark, oklch(70% 0.025 205)));
+  --wave-surface: var(--wave-counter-surface, var(--wave-counter-surface-dark, oklch(26% 0.018 215)));
+  --wave-raised: var(--wave-counter-raised, var(--wave-counter-raised-dark, oklch(30% 0.018 215)));
+  --wave-border: var(--wave-counter-border, var(--wave-counter-border-dark, oklch(43% 0.025 210)));
+  --wave-accent: var(--wave-counter-color, var(--wave-counter-color-dark, oklch(72% 0.11 194)));
+  --wave-accent-strong: var(
+    --wave-counter-color-strong,
+    var(--wave-counter-color-strong-dark, oklch(78% 0.1 194))
+  );
+  --wave-error: var(--wave-counter-error, var(--wave-counter-error-dark, oklch(72% 0.12 25)));
+  --wave-contact-shadow: oklch(12% 0.018 215 / 0.18);
+  --wave-popover-contact-shadow: oklch(12% 0.018 215 / 0.22);
+  --wave-popover-ambient-shadow: oklch(12% 0.018 215 / 0.32);
+}
+
+.wave-counter__trigger {
+  min-width: 4.5rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--wave-border);
+  border-radius: var(--wave-radius);
+  background: var(--wave-surface);
+  color: var(--wave-ink);
+  box-shadow: 0 1px 1px var(--wave-contact-shadow);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--wave-press-duration) var(--wave-ease-out),
+    border-color var(--wave-press-duration) ease,
+    background-color var(--wave-press-duration) ease;
+}
+
+.wave-counter__trigger:active {
+  transform: scale(0.97);
+  transition-duration: var(--wave-active-duration);
+}
+
+.wave-counter__trigger:focus-visible,
+.wave-counter__close:focus-visible,
+.wave-counter__error button:focus-visible {
+  outline: 3px solid color-mix(in oklch, var(--wave-accent), transparent 55%);
+  outline-offset: 2px;
+}
+
+.wave-counter__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: grid;
+  place-items: center;
+  color: var(--wave-accent-strong);
+}
+
+.wave-counter__icon > * {
+  width: 100%;
+  height: 100%;
+}
+
+.wave-counter__total {
+  min-width: 1ch;
+  font-size: 0.9375rem;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+.wave-counter__popover {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 1rem 1rem 0.875rem;
+  border: 1px solid var(--wave-border);
+  border-radius: var(--wave-popover-radius);
+  background: var(--wave-raised);
+  color: var(--wave-ink);
+  box-shadow:
+    0 1px 2px var(--wave-popover-contact-shadow),
+    0 14px 34px var(--wave-popover-ambient-shadow);
+  transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px)));
+  transform-origin: top center;
+}
+
+.wave-popover-enter-active {
+  transition:
+    opacity var(--wave-popover-duration) var(--wave-ease-out),
+    transform var(--wave-popover-duration) var(--wave-ease-out);
+}
+
+.wave-popover-leave-active {
+  transition:
+    opacity var(--wave-popover-exit-duration) var(--wave-ease-out),
+    transform var(--wave-popover-exit-duration) var(--wave-ease-out);
+}
+
+.wave-popover-enter-from,
+.wave-popover-leave-to {
+  opacity: 0;
+  transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px))) translateY(-0.25rem)
+    scale(0.97);
+}
+
+.wave-counter[data-open-source='keyboard'] .wave-popover-enter-active,
+.wave-counter[data-open-source='keyboard'] .wave-popover-leave-active {
+  transition-duration: 0ms;
+}
+
+.wave-counter__heading,
+.wave-counter__summary-row {
+  display: flex;
+  align-items: center;
+}
+
+.wave-counter__heading {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.wave-counter__heading h2,
+.wave-counter__eyebrow,
+.wave-counter__comparison,
+.wave-counter__range,
+.wave-counter__error p {
+  margin: 0;
+}
+
+.wave-counter__heading h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+}
+
+.wave-counter__eyebrow {
+  margin-bottom: 0.125rem;
+  color: var(--wave-muted);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wave-counter__close {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--wave-muted);
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 130ms ease,
+    color 130ms ease;
+}
+
+.wave-counter__summary-row {
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.wave-counter__summary-row strong {
+  font-size: 1.75rem;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.wave-counter__summary-row span,
+.wave-counter__comparison,
+.wave-counter__range {
+  color: var(--wave-muted);
+  font-size: 0.75rem;
+}
+
+.wave-counter__comparison {
+  margin-top: 0.375rem;
+}
+
+.wave-chart {
+  width: 100%;
+  height: 5.5rem;
+  display: block;
+  margin: 0.875rem 0 0.5rem;
+  overflow: visible;
+}
+
+.wave-chart__baseline {
+  stroke: var(--wave-border);
+  stroke-width: 1;
+}
+
+.wave-chart__line {
+  fill: none;
+  stroke: var(--wave-accent-strong);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+  vector-effect: non-scaling-stroke;
+}
+
+.wave-chart[data-animate] .wave-chart__line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: wave-line-draw var(--wave-popover-duration) var(--wave-ease-out) both;
+}
+
+.wave-chart__point {
+  fill: var(--wave-raised);
+  stroke: var(--wave-accent-strong);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+@keyframes wave-line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+.wave-counter__loading {
+  min-height: 7.5rem;
+  display: grid;
+  place-items: center;
+  color: var(--wave-muted);
+  font-size: 0.8125rem;
+}
+
+.wave-counter__error {
+  padding: 0.875rem;
+  border: 1px solid color-mix(in oklch, var(--wave-error), transparent 70%);
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--wave-error), transparent 94%);
+  color: var(--wave-error);
+  font-size: 0.8125rem;
+}
+
+.wave-counter__error button {
+  margin-top: 0.625rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.wave-counter__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wave-counter__trigger:hover {
+    border-color: color-mix(in oklch, var(--wave-accent), var(--wave-border) 60%);
+    background: color-mix(in oklch, var(--wave-accent), var(--wave-surface) 94%);
+  }
+
+  .wave-counter__close:hover {
+    background: var(--wave-surface);
+    color: var(--wave-ink);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .wave-counter[data-theme='auto'] {
+    color-scheme: dark;
+    --wave-ink: var(--wave-counter-ink, var(--wave-counter-ink-dark, oklch(92% 0.012 205)));
+    --wave-muted: var(--wave-counter-muted, var(--wave-counter-muted-dark, oklch(70% 0.025 205)));
+    --wave-surface: var(--wave-counter-surface, var(--wave-counter-surface-dark, oklch(26% 0.018 215)));
+    --wave-raised: var(--wave-counter-raised, var(--wave-counter-raised-dark, oklch(30% 0.018 215)));
+    --wave-border: var(--wave-counter-border, var(--wave-counter-border-dark, oklch(43% 0.025 210)));
+    --wave-accent: var(--wave-counter-color, var(--wave-counter-color-dark, oklch(72% 0.11 194)));
+    --wave-accent-strong: var(
+      --wave-counter-color-strong,
+      var(--wave-counter-color-strong-dark, oklch(78% 0.1 194))
+    );
+    --wave-error: var(--wave-counter-error, var(--wave-counter-error-dark, oklch(72% 0.12 25)));
+    --wave-contact-shadow: oklch(12% 0.018 215 / 0.18);
+    --wave-popover-contact-shadow: oklch(12% 0.018 215 / 0.22);
+    --wave-popover-ambient-shadow: oklch(12% 0.018 215 / 0.32);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-counter__trigger,
+  .wave-popover-enter-active,
+  .wave-popover-leave-active {
+    transition-duration: 0ms;
+  }
+
+  .wave-popover-enter-from,
+  .wave-popover-leave-to {
+    transform: translateX(calc(-50% + var(--wave-popover-offset-x, 0px)));
+  }
+
+  .wave-counter__trigger:active {
+    transform: none;
+  }
+
+  .wave-chart[data-animate] .wave-chart__line {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .wave-counter__trigger,
+  .wave-counter__popover {
+    background: var(--wave-raised);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .wave-counter__trigger,
+  .wave-counter__popover {
+    border-color: currentColor;
+  }
+
+  .wave-chart__line,
+  .wave-chart__point {
+    stroke-width: 3;
+  }
+}

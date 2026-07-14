@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 import {
   WaveCounterClient,
@@ -34,9 +34,11 @@ export function useWaveCounter(options: UseWaveCounterOptions): UseWaveCounterRe
       ),
     [options.counterKey, options.endpoint, options.showStats, options.transport],
   )
+  const subscribe = useCallback((listener: () => void) => controller.subscribe(listener), [controller])
+  const getSnapshot = useCallback(() => controller.snapshot, [controller])
   const state = useSyncExternalStore(
-    controller.subscribe.bind(controller),
-    () => controller.snapshot,
+    subscribe,
+    getSnapshot,
   )
 
   return {
