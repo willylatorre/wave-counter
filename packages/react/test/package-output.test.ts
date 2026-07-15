@@ -28,6 +28,10 @@ test('build externalizes React JSX runtime modules', () => {
   expect(bundle).not.toContain('react.transitional.element')
 })
 
+test('build preserves Number Flow as a runtime dependency', () => {
+  expect(bundle).toMatch(/from ["']@number-flow\/react["']/)
+})
+
 test('build publishes the WaveCounterTheme type from the package entrypoint', () => {
   expect(declarations).toContain("export type { WaveCounterProps, WaveCounterTheme } from './WaveCounter.js'")
 })

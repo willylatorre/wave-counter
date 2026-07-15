@@ -8,6 +8,7 @@ const isExternalDependency = (id: string) => (
   || id.startsWith('react/')
   || id === 'react-dom'
   || id.startsWith('react-dom/')
+  || id === '@number-flow/react'
 )
 
 export default defineConfig({

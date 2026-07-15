@@ -25,6 +25,7 @@ export class WaveCounterController {
   readonly #transport: WaveCounterTransport
   readonly #listeners = new Set<WaveCounterListener>()
   #authoritative: CounterSnapshot | null = null
+  #analyticsRequest = 0
   #state: WaveCounterState
 
   constructor(
@@ -79,6 +80,7 @@ export class WaveCounterController {
       const counter = await this.#transport.increment(this.#key)
       this.#authoritative = latestCounter(this.#authoritative, counter)
       this.#syncCounter({ pendingIncrements: this.#state.pendingIncrements - 1 })
+      if (this.#state.statsOpen) void this.loadAnalytics().catch(() => {})
     } catch (caught) {
       this.#syncCounter({
         pendingIncrements: this.#state.pendingIncrements - 1,
@@ -95,9 +97,7 @@ export class WaveCounterController {
   async openStats(): Promise<void> {
     if (!this.#state.statsEnabled) return
     this.#update({ statsOpen: true })
-    if (this.#state.analytics === null || this.#state.analytics.window !== this.#state.analyticsWindow) {
-      await this.loadAnalytics()
-    }
+    await this.loadAnalytics()
   }
 
   closeStats(): void {
@@ -117,11 +117,13 @@ export class WaveCounterController {
 
   async loadAnalytics(window = this.#state.analyticsWindow): Promise<void> {
     if (!this.#state.statsEnabled) return
+    const request = ++this.#analyticsRequest
     this.#update({ analyticsWindow: window, analyticsLoading: true, analyticsError: null })
     try {
       const analytics = await this.#transport.getAnalytics(this.#key, window)
-      this.#update({ analytics, analyticsLoading: false })
+      if (request === this.#analyticsRequest) this.#update({ analytics, analyticsLoading: false })
     } catch (caught) {
+      if (request !== this.#analyticsRequest) return
       this.#update({ analyticsLoading: false, analyticsError: asError(caught) })
       throw caught
     }

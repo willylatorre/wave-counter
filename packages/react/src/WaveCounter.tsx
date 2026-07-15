@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react'
+import NumberFlow from '@number-flow/react'
 import {
   capitalize,
   comparisonText,
@@ -273,9 +274,10 @@ export function WaveCounter({
     }
   }
 
-  const comparison = comparisonText(wave.analytics, wave.analyticsWindow)
-  const dateRange = rangeText(wave.analytics, wave.analyticsWindow)
-  const summary = summaryText(wave.analytics, wave.analyticsWindow)
+  const displayedAnalyticsWindow = wave.analytics?.window ?? wave.analyticsWindow
+  const comparison = comparisonText(wave.analytics, displayedAnalyticsWindow)
+  const dateRange = rangeText(wave.analytics, displayedAnalyticsWindow)
+  const summary = summaryText(wave.analytics, displayedAnalyticsWindow)
   const showPopover = mounted || wave.statsOpen || leaving
   const popoverClasses = [
     'wave-counter__popover',
@@ -381,7 +383,7 @@ export function WaveCounter({
                   </button>
                 </div>
               </div>
-              {wave.analyticsLoading ? (
+              {wave.analyticsLoading && !wave.analytics ? (
                 <div className="wave-counter__loading" role="status">Loading activity</div>
               ) : wave.analyticsError ? (
                 <div className="wave-counter__error" role="alert">
@@ -390,7 +392,11 @@ export function WaveCounter({
                 </div>
               ) : wave.analytics ? (
                 <div className="wave-counter__analytics">
-                  <div className="wave-counter__summary-row"><strong>{wave.analytics.total}</strong><span>events</span></div>
+                  <div className="wave-counter__summary-row">
+                    <strong><NumberFlow value={wave.analytics.total} /></strong>
+                    {wave.analyticsLoading && <><span className="wave-counter__refresh-spinner" data-refresh-spinner="" aria-hidden="true" /><span className="wave-counter__sr-only" role="status">Refreshing activity</span></>}
+                    <span>events</span>
+                  </div>
                   <p data-testid="comparison" data-comparison="" className="wave-counter__comparison">{comparison}</p>
                   <AnalyticsChart analytics={wave.analytics} animate={animateChart} />
                   <p className="wave-counter__range">{dateRange}</p>

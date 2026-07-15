@@ -167,6 +167,72 @@ test('loads and switches analytics windows', async () => {
   expect(controller.snapshot).toMatchObject({ analyticsWindow: 'all', analytics: analyticsFor('all') })
 })
 
+test('revalidates cached analytics each time stats opens', async () => {
+  const getAnalytics = vi.fn().mockResolvedValue(analytics)
+  const controller = new WaveCounterController('coffee', transport({ getAnalytics }))
+
+  await controller.openStats()
+  controller.closeStats()
+  await controller.openStats()
+
+  expect(getAnalytics).toHaveBeenCalledTimes(2)
+})
+
+test('refreshes open analytics after a successful increment', async () => {
+  const getAnalytics = vi.fn().mockResolvedValue(analytics)
+  const controller = new WaveCounterController('coffee', transport({ getAnalytics }))
+
+  await controller.openStats()
+  await controller.increment()
+
+  expect(getAnalytics).toHaveBeenCalledTimes(2)
+})
+
+test('keeps the latest analytics response when refreshes race', async () => {
+  let resolveFirst!: (value: Analytics) => void
+  let resolveSecond!: (value: Analytics) => void
+  const getAnalytics = vi
+    .fn()
+    .mockReturnValueOnce(new Promise<Analytics>((resolve) => { resolveFirst = resolve }))
+    .mockReturnValueOnce(new Promise<Analytics>((resolve) => { resolveSecond = resolve }))
+  const controller = new WaveCounterController('coffee', transport({ getAnalytics }))
+
+  const first = controller.openStats()
+  const second = controller.loadAnalytics()
+  resolveSecond(analyticsFor('all'))
+  await second
+  resolveFirst(analytics)
+  await first
+
+  expect(controller.snapshot).toMatchObject({
+    analytics: analyticsFor('all'),
+    analyticsLoading: false,
+  })
+})
+
+test('suppresses an obsolete analytics failure after a newer response succeeds', async () => {
+  let rejectFirst!: (error: Error) => void
+  let resolveSecond!: (value: Analytics) => void
+  const getAnalytics = vi
+    .fn()
+    .mockReturnValueOnce(new Promise<Analytics>((_resolve, reject) => { rejectFirst = reject }))
+    .mockReturnValueOnce(new Promise<Analytics>((resolve) => { resolveSecond = resolve }))
+  const controller = new WaveCounterController('coffee', transport({ getAnalytics }))
+
+  const first = controller.openStats()
+  const second = controller.loadAnalytics()
+  resolveSecond(analyticsFor('all'))
+  await second
+  rejectFirst(new Error('obsolete request'))
+
+  await expect(first).resolves.toBeUndefined()
+  expect(controller.snapshot).toMatchObject({
+    analytics: analyticsFor('all'),
+    analyticsError: null,
+    analyticsLoading: false,
+  })
+})
+
 test('keeps analytics errors inside stats and retries', async () => {
   const getAnalytics = vi
     .fn()

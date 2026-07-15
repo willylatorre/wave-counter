@@ -32,6 +32,7 @@
     "typecheck": "vue-tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@number-flow/vue": "^0.5.1",
     "@waves-counter/client": "0.2.1"
   },
   "devDependencies": {

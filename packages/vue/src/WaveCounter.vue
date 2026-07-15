@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
+import NumberFlow from '@number-flow/vue'
 import {
   capitalize,
   comparisonText,
@@ -72,9 +73,10 @@ const triggerLabel = computed(() => {
     : ''
   return `Add one ${props.counterKey}. ${count}.${statsHint}`
 })
-const comparison = computed(() => comparisonText(wave.analytics.value, wave.analyticsWindow.value))
-const dateRange = computed(() => rangeText(wave.analytics.value, wave.analyticsWindow.value))
-const accessibleSummary = computed(() => summaryText(wave.analytics.value, wave.analyticsWindow.value))
+const displayedAnalyticsWindow = computed(() => wave.analytics.value?.window ?? wave.analyticsWindow.value)
+const comparison = computed(() => comparisonText(wave.analytics.value, displayedAnalyticsWindow.value))
+const dateRange = computed(() => rangeText(wave.analytics.value, displayedAnalyticsWindow.value))
+const accessibleSummary = computed(() => summaryText(wave.analytics.value, displayedAnalyticsWindow.value))
 
 watch(
   () => props.showStats,
@@ -317,7 +319,7 @@ async function selectAnalyticsWindow(window: AnalyticsWindow): Promise<void> {
             </div>
           </div>
 
-          <div v-if="wave.analyticsLoading.value" class="wave-counter__loading" role="status">
+          <div v-if="wave.analyticsLoading.value && !wave.analytics.value" class="wave-counter__loading" role="status">
             Loading activity
           </div>
           <div v-else-if="wave.analyticsError.value" class="wave-counter__error" role="alert">
@@ -326,7 +328,11 @@ async function selectAnalyticsWindow(window: AnalyticsWindow): Promise<void> {
           </div>
           <div v-else-if="wave.analytics.value" class="wave-counter__analytics">
             <div class="wave-counter__summary-row">
-              <strong>{{ wave.analytics.value.total }}</strong>
+              <strong><NumberFlow :value="wave.analytics.value.total" /></strong>
+              <template v-if="wave.analyticsLoading.value">
+                <span class="wave-counter__refresh-spinner" data-refresh-spinner aria-hidden="true" />
+                <span class="wave-counter__sr-only" role="status">Refreshing activity</span>
+              </template>
               <span>events</span>
             </div>
             <p data-comparison class="wave-counter__comparison">{{ comparison }}</p>
