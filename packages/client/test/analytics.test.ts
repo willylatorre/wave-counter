@@ -2,6 +2,7 @@ import { expect, test } from 'vitest'
 
 import {
   ANALYTICS_CHART_GEOMETRY,
+  analyticsChartPaths,
   analyticsChartPoints,
   capitalize,
   comparisonText,
@@ -111,4 +112,22 @@ test('analyticsChartPoints maps counts into the viewBox, flooring the max at 1',
 test('analyticsChartPoints handles a single point without dividing by zero', () => {
   const [only] = analyticsChartPoints(analyticsWith({ points: pointsFrom([5]) }))
   expect(only).toEqual({ x: ANALYTICS_CHART_GEOMETRY.inset, y: ANALYTICS_CHART_GEOMETRY.inset, count: 5 })
+})
+
+test('analyticsChartPaths creates a smooth line and baseline-closed area', () => {
+  const points = analyticsChartPoints(analyticsWith({ points: pointsFrom([0, 4, 2]) }))
+
+  expect(analyticsChartPaths(points)).toEqual({
+    line: 'M 8 80 C 64 80 64 8 120 8 C 176 8 176 44 232 44',
+    area: 'M 8 80 C 64 80 64 8 120 8 C 176 8 176 44 232 44 L 232 80 L 8 80 Z',
+  })
+})
+
+test('analyticsChartPaths handles a single point', () => {
+  const [point] = analyticsChartPoints(analyticsWith({ points: pointsFrom([5]) }))
+
+  expect(analyticsChartPaths([point!])).toEqual({
+    line: 'M 8 8',
+    area: 'M 8 80 L 8 8 L 8 80 Z',
+  })
 })

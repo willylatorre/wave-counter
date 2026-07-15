@@ -7,6 +7,16 @@ import { afterEach, expect, test, vi } from 'vitest'
 
 import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@waves-counter/client'
 
+vi.mock('@number-flow/vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  return {
+    default: defineComponent({
+      props: { value: { type: Number, required: true } },
+      setup: (props) => () => h('span', { 'data-number-flow': '' }, props.value),
+    }),
+  }
+})
+
 import WaveCounter from '../src/WaveCounter.vue'
 
 const zero: CounterSnapshot = { key: 'coffee', total: 0, updatedAt: null }
@@ -187,6 +197,27 @@ test('switches the analytics window from the default popover controls', async ()
   expect(wrapper.get('button[aria-label="All"]').attributes('aria-pressed')).toBe('true')
 })
 
+test('retains analytics while the selected window refreshes', async () => {
+  let resolveWindow!: (value: Analytics) => void
+  const getAnalytics = vi
+    .fn()
+    .mockResolvedValueOnce(analytics)
+    .mockReturnValueOnce(new Promise<Analytics>((resolve) => { resolveWindow = resolve }))
+  const wrapper = mountCounter(transport({ getAnalytics }))
+  await flushPromises()
+
+  await wrapper.get('button').trigger('contextmenu')
+  await flushPromises()
+  await wrapper.get('button[aria-label="All"]').trigger('click')
+
+  expect(wrapper.get('[data-accessible-summary]').text()).toContain('6 events')
+  expect(wrapper.get('[data-accessible-summary]').text()).toContain('last seven days')
+  expect(wrapper.get('[role="status"]').text()).toContain('Refreshing activity')
+  expect(wrapper.find('[data-refresh-spinner]').exists()).toBe(true)
+  resolveWindow(analyticsFor('all'))
+  await flushPromises()
+})
+
 test('clamps the popover horizontally inside the viewport', async () => {
   const wrapper = mountCounter()
   await flushPromises()
@@ -286,7 +317,11 @@ test('duplicates chart information as text and hides the SVG from assistive tech
   await flushPromises()
 
   expect(wrapper.get('[data-accessible-summary]').text()).toContain('6 events')
-  expect(wrapper.get('.wave-chart').attributes('aria-hidden')).toBe('true')
+  const chart = wrapper.get('.wave-chart')
+  expect(chart.attributes('aria-hidden')).toBe('true')
+  expect(chart.find('.wave-chart__area').exists()).toBe(true)
+  expect(chart.find('.wave-chart__line').element.tagName).toBe('path')
+  expect(chart.findAll('.wave-chart__point')).toHaveLength(0)
   expect(wrapper.get('[data-comparison]').text()).toContain('100%')
 })
 

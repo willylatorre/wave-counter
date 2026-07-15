@@ -250,6 +250,21 @@
   letter-spacing: -0.035em;
 }
 
+.wave-counter__refresh-spinner {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 1.5px solid color-mix(in oklch, var(--wave-accent), transparent 72%);
+  border-right-color: var(--wave-accent-strong);
+  border-radius: 50%;
+  animation: wave-refresh-spin 700ms linear infinite;
+}
+
+@keyframes wave-refresh-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 .wave-counter__summary-row span,
 .wave-counter__comparison,
 .wave-counter__range {
@@ -274,12 +289,16 @@
   stroke-width: 1;
 }
 
+.wave-chart__area {
+  fill: url(#wave-chart-gradient);
+}
+
 .wave-chart__line {
   fill: none;
   stroke: var(--wave-accent-strong);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.25;
+  stroke-width: 1.7;
   vector-effect: non-scaling-stroke;
 }
 
@@ -287,13 +306,6 @@
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
   animation: wave-line-draw var(--wave-popover-duration) var(--wave-ease-out) both;
-}
-
-.wave-chart__point {
-  fill: var(--wave-raised);
-  stroke: var(--wave-accent-strong);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
 }
 
 @keyframes wave-line-draw {
@@ -400,12 +412,20 @@
     animation: none;
     stroke-dasharray: none;
   }
+
+  .wave-counter__refresh-spinner {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .wave-counter__trigger,
   .wave-counter__popover {
     background: var(--wave-raised);
+  }
+
+  .wave-chart__area {
+    fill: color-mix(in oklch, var(--wave-accent) 18%, transparent);
   }
 }
 
@@ -415,8 +435,7 @@
     border-color: currentColor;
   }
 
-  .wave-chart__line,
-  .wave-chart__point {
+  .wave-chart__line {
     stroke-width: 3;
   }
 }

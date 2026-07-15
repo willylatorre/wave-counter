@@ -15,6 +15,7 @@ export type {
 } from './types.js'
 export {
   ANALYTICS_CHART_GEOMETRY,
+  analyticsChartPaths,
   analyticsChartPoints,
   capitalize,
   comparisonText,
@@ -23,4 +24,4 @@ export {
   summaryText,
   windowSummary,
 } from './analytics.js'
-export type { AnalyticsChartGeometry, AnalyticsChartPoint } from './analytics.js'
+export type { AnalyticsChartGeometry, AnalyticsChartPaths, AnalyticsChartPoint } from './analytics.js'

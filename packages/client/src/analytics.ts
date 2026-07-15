@@ -105,3 +105,44 @@ export function analyticsChartPoints(
     count: point.count,
   }))
 }
+
+/** SVG paths for the marker-free analytics trend line and its baseline-closed area. */
+export interface AnalyticsChartPaths {
+  line: string
+  area: string
+}
+
+/**
+ * Converts chart coordinates into a smooth, monotone cubic trend line. Each
+ * segment's controls share the midpoint x-coordinate, keeping the curve within
+ * the daily values at either end rather than overshooting them.
+ */
+export function analyticsChartPaths(
+  points: readonly AnalyticsChartPoint[],
+  geometry: AnalyticsChartGeometry = ANALYTICS_CHART_GEOMETRY,
+): AnalyticsChartPaths {
+  if (points.length === 0) return { line: '', area: '' }
+
+  const baseline = geometry.height - geometry.inset
+  const first = points[0]!
+  if (points.length === 1) {
+    return {
+      line: `M ${first.x} ${first.y}`,
+      area: `M ${first.x} ${baseline} L ${first.x} ${first.y} L ${first.x} ${baseline} Z`,
+    }
+  }
+
+  let line = `M ${first.x} ${first.y}`
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]!
+    const point = points[index]!
+    const midpoint = (previous.x + point.x) / 2
+    line += ` C ${midpoint} ${previous.y} ${midpoint} ${point.y} ${point.x} ${point.y}`
+  }
+
+  const last = points.at(-1)!
+  return {
+    line,
+    area: `${line} L ${last.x} ${baseline} L ${first.x} ${baseline} Z`,
+  }
+}

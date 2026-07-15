@@ -7,6 +7,13 @@ import { afterEach, expect, test, vi } from 'vitest'
 
 import type { Analytics, CounterSnapshot, WaveCounterTransport } from '@waves-counter/client'
 
+vi.mock('@number-flow/react', async () => {
+  const React = await import('react')
+  return {
+    default: ({ value }: { value: number }) => React.createElement('span', { 'data-number-flow': '' }, value),
+  }
+})
+
 import { WaveCounter } from '../src/index.js'
 
 const zero: CounterSnapshot = { key: 'coffee', total: 0, updatedAt: null }
@@ -183,6 +190,28 @@ test('switches the analytics window from the default popover controls', async ()
   expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
 })
 
+test('retains analytics while the selected window refreshes', async () => {
+  let resolveWindow!: (value: Analytics) => void
+  const getAnalytics = vi
+    .fn()
+    .mockResolvedValueOnce(analytics)
+    .mockReturnValueOnce(new Promise<Analytics>((resolve) => { resolveWindow = resolve }))
+  renderCounter(transport({ getAnalytics }))
+
+  fireEvent.contextMenu(await screen.findByRole('button'))
+  expect((await screen.findByTestId('accessible-summary')).textContent).toContain('6 events')
+  fireEvent.click(screen.getByRole('button', { name: 'All' }))
+
+  expect(screen.getByTestId('accessible-summary').textContent).toContain('6 events')
+  expect(screen.getByTestId('accessible-summary').textContent).toContain('last seven days')
+  expect(screen.getByText('Refreshing activity')).not.toBeNull()
+  expect(document.querySelector('[data-refresh-spinner]')).not.toBeNull()
+  await act(async () => {
+    resolveWindow(analyticsFor('all'))
+    await Promise.resolve()
+  })
+})
+
 test('disables stats interactions when showStats is false', async () => {
   renderCounter(transport(), { showStats: false })
   const trigger = await screen.findByRole('button')
@@ -235,7 +264,11 @@ test('renders the default coffee icon, accessible summary, and hidden chart', as
   expect(total.parentElement?.querySelector('[data-wave-coffee-icon]')?.tagName).toBe('svg')
   fireEvent.contextMenu(screen.getByRole('button'))
   expect((await screen.findByTestId('accessible-summary')).textContent).toContain('6 events')
-  expect(screen.getByTestId('analytics-chart').getAttribute('aria-hidden')).toBe('true')
+  const chart = screen.getByTestId('analytics-chart')
+  expect(chart.getAttribute('aria-hidden')).toBe('true')
+  expect(chart.querySelector('.wave-chart__area')).not.toBeNull()
+  expect(chart.querySelector('.wave-chart__line')?.tagName).toBe('path')
+  expect(chart.querySelectorAll('.wave-chart__point')).toHaveLength(0)
   expect(screen.getByTestId('comparison').textContent).toContain('100%')
 })
 
