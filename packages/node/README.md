@@ -63,9 +63,13 @@ const result = await counter.recordEvent(
 )
 
 const analytics = await counter.analytics('coffee', '7d')
+
+counter.close()
 ```
 
 `recordEvent` returns `{ counter, created }`. Reusing the same event ID returns `created: false` and does not increment again.
+
+Call `close()` when you need deterministic teardown, such as tests or short-lived scripts that delete the SQLite file immediately afterward. Long-running servers can let process shutdown release the engine naturally.
 
 ## Options
 

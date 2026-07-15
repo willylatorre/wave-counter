@@ -1,4 +1,9 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use napi::{
     Env, Status,
@@ -9,7 +14,7 @@ use wave_counter_core::{AnalyticsWindow, Config, WaveCounter, WaveCounterError};
 
 #[napi]
 pub struct NativeWaveCounter {
-    engine: Arc<WaveCounter>,
+    engine: Mutex<Option<Arc<WaveCounter>>>,
 }
 
 #[napi]
@@ -35,33 +40,59 @@ impl NativeWaveCounter {
         // construction, matching the Python binding and the spec's
         // "initialization fails with a configuration error" contract.
         let engine = Arc::new(WaveCounter::open(config).map_err(domain_error)?);
-        Ok(Self { engine })
+        Ok(Self {
+            engine: Mutex::new(Some(engine)),
+        })
     }
 
     #[napi(js_name = "getCounter")]
-    pub fn get_counter(&self, key: String) -> AsyncTask<GetCounterTask> {
-        AsyncTask::new(GetCounterTask {
-            engine: Arc::clone(&self.engine),
+    pub fn get_counter(&self, key: String) -> napi::Result<AsyncTask<GetCounterTask>> {
+        Ok(AsyncTask::new(GetCounterTask {
+            engine: self.engine()?,
             key,
-        })
+        }))
     }
 
     #[napi(js_name = "recordEvent")]
-    pub fn record_event(&self, key: String, event_id: String) -> AsyncTask<RecordEventTask> {
-        AsyncTask::new(RecordEventTask {
-            engine: Arc::clone(&self.engine),
+    pub fn record_event(
+        &self,
+        key: String,
+        event_id: String,
+    ) -> napi::Result<AsyncTask<RecordEventTask>> {
+        Ok(AsyncTask::new(RecordEventTask {
+            engine: self.engine()?,
             key,
             event_id,
-        })
+        }))
     }
 
     #[napi]
-    pub fn analytics(&self, key: String, window: String) -> AsyncTask<AnalyticsTask> {
-        AsyncTask::new(AnalyticsTask {
-            engine: Arc::clone(&self.engine),
+    pub fn analytics(&self, key: String, window: String) -> napi::Result<AsyncTask<AnalyticsTask>> {
+        Ok(AsyncTask::new(AnalyticsTask {
+            engine: self.engine()?,
             key,
             window,
-        })
+        }))
+    }
+
+    #[napi]
+    pub fn close(&self) {
+        let _ = self
+            .engine
+            .lock()
+            .expect("native engine mutex poisoned")
+            .take();
+    }
+}
+
+impl NativeWaveCounter {
+    fn engine(&self) -> napi::Result<Arc<WaveCounter>> {
+        self.engine
+            .lock()
+            .expect("native engine mutex poisoned")
+            .as_ref()
+            .cloned()
+            .ok_or_else(closed_error)
     }
 }
 
@@ -142,5 +173,12 @@ fn serialization_error(error: serde_json::Error) -> napi::Error {
     napi::Error::new(
         Status::GenericFailure,
         format!("storage|response serialization failed: {error}"),
+    )
+}
+
+fn closed_error() -> napi::Error {
+    napi::Error::new(
+        Status::GenericFailure,
+        "storage|counter storage is closed".to_string(),
     )
 }

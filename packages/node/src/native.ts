@@ -7,6 +7,7 @@ interface NativeCounter {
   getCounter(key: string): Promise<string>
   recordEvent(key: string, eventId: string): Promise<string>
   analytics(key: string, window: string): Promise<string>
+  close(): void
 }
 
 interface NativeModule {

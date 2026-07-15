@@ -76,6 +76,10 @@ export class WaveCounter implements WaveCounterEngine {
     return this.#call<Analytics>(() => this.#native.analytics(key, window))
   }
 
+  close(): void {
+    this.#native.close()
+  }
+
   async #call<Result>(operation: () => Promise<string>): Promise<Result> {
     try {
       return JSON.parse(await operation()) as Result
@@ -91,4 +95,3 @@ function domainError(error: unknown): WaveCounterError {
   if (separator === -1) return new WaveCounterError('storage', 'storage operation failed')
   return new WaveCounterError(message.slice(0, separator), message.slice(separator + 1))
 }
-

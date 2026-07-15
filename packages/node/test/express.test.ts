@@ -11,6 +11,7 @@ import { WaveCounter, WaveCounterError, type WaveCounterEngine } from '../src/in
 import { createWaveRouter } from '../src/express.js'
 
 const directories: string[] = []
+const counters: WaveCounter[] = []
 
 async function databasePath(name = 'waves.sqlite3'): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), 'wave-counter-express-'))
@@ -25,7 +26,14 @@ function appFor(counter: WaveCounterEngine, authorize?: (request: express.Reques
   return app
 }
 
+function counter(options: ConstructorParameters<typeof WaveCounter>[0]): WaveCounter {
+  const engine = new WaveCounter(options)
+  counters.push(engine)
+  return engine
+}
+
 afterEach(async () => {
+  for (const engine of counters.splice(0)) engine.close()
   await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true })))
 })
 
@@ -35,11 +43,11 @@ test('executes the shared conformance scenarios', async () => {
   )
 
   for (const [index, scenario] of fixture.scenarios.entries()) {
-    const counter = new WaveCounter({
+    const engine = counter({
       databasePath: await databasePath(`scenario-${index}.sqlite3`),
       initialCounts: scenario.initialCounts,
     })
-    const app = appFor(counter)
+    const app = appFor(engine)
     for (const step of scenario.steps) {
       const response = await request(app)
         [step.method.toLowerCase() as 'get' | 'post'](`/api/waves${step.path}`)
@@ -52,9 +60,9 @@ test('executes the shared conformance scenarios', async () => {
 })
 
 test('records events without host-provided body parsing', async () => {
-  const counter = new WaveCounter({ databasePath: await databasePath() })
+  const engine = counter({ databasePath: await databasePath() })
   const app = express()
-  app.use('/api/waves', createWaveRouter(counter))
+  app.use('/api/waves', createWaveRouter(engine))
 
   const created = await request(app)
     .post('/api/waves/counters/coffee/events')
@@ -73,8 +81,8 @@ test('records events without host-provided body parsing', async () => {
 })
 
 test('supports host authorization callbacks', async () => {
-  const counter = new WaveCounter({ databasePath: await databasePath() })
-  const app = appFor(counter, (incoming) => incoming.header('x-key') === 'yes')
+  const engine = counter({ databasePath: await databasePath() })
+  const app = appFor(engine, (incoming) => incoming.header('x-key') === 'yes')
 
   await request(app).get('/api/waves/counters/coffee').expect(403)
   await request(app).get('/api/waves/counters/coffee').set('x-key', 'yes').expect(200)
