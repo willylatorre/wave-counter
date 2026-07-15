@@ -11,7 +11,8 @@ let bundle = ''
 let declarations = ''
 
 beforeAll(async () => {
-  execFileSync(npmCommandFor(process.platform), ['run', 'build'], {
+  const npm = npmCommandFor(process.platform)
+  execFileSync(npm.command, [...npm.args, 'run', 'build'], {
     cwd: packageDirectory,
     env: { ...process.env, NODE_ENV: 'production' },
     stdio: 'inherit',
